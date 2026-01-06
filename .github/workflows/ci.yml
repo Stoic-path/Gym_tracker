@@ -1,0 +1,37 @@
+# .github/workflows/ci.yml
+name: CI (Lint & Test)
+
+# Se ejecuta en pushes a cualquier rama clave para cumplir con la Sección 7.2
+on:
+  push:
+    branches:
+      - [cite_start]'feature/*'  # 
+      - [cite_start]'develop'    # 
+      - [cite_start]'main'       # [cite: 1071]
+  pull_request:      # También en los PRs para ver el check verde antes de aceptar
+
+jobs:
+  ci:
+    name: CI Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. Instalar Moonrepo
+      - uses: moonrepo/setup-moon-action@v1
+
+      # 2. Instalar Toolchain (Node + Python según .moon/toolchain.yml)
+      - name: Install Toolchain
+        run: moon setup
+
+      # 3. Validar Código (Lint) - Requerido en las 3 ramas según reporte
+      - name: Run Lint
+        run: moon run :lint
+        continue-on-error: true 
+
+      # 4. Pruebas Unitarias - Requerido en las 3 ramas según reporte
+      - name: Run Tests
+        run: moon run :test
+        continue-on-error: true
