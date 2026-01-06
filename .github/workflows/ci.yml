@@ -5,9 +5,9 @@ name: CI (Lint & Test)
 on:
   push:
     branches:
-      - [cite_start]'feature/*'  # 
-      - [cite_start]'develop'    # 
-      - [cite_start]'main'       # [cite: 1071]
+      - 'feature/*'  # 
+      - 'develop'    # 
+      - 'main'       # 
   pull_request:      # También en los PRs para ver el check verde antes de aceptar
 
 jobs:
