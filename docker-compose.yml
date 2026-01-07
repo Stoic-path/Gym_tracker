@@ -1,0 +1,59 @@
+services:
+  # --- FRONTEND (React) ---
+  web:
+    build: apps/web
+    ports:
+      - "3000:80" # http://localhost:3000
+    depends_on:
+      - auth-service
+
+  # --- BACKEND SERVICES (Python/Django) ---
+  auth-service:
+    build: services/auth-service
+    ports:
+      - "8001:8000" # http://localhost:8001
+
+  user-profile-service:
+    build: services/user-profile-service
+    ports:
+      - "8002:8000"
+
+  workout-command-service:
+    build: services/workout-command-service
+    ports:
+      - "8003:8000"
+
+  workout-query-service:
+    build: services/workout-query-service
+    ports:
+      - "8004:8000"
+
+  routine-service:
+    build: services/routine-service
+    ports:
+      - "8005:8000"
+
+  exercise-library-service:
+    build: services/exercise-library-service
+    ports:
+      - "8006:8000"
+
+  video-service:
+    build: services/video-service
+    ports:
+      - "8007:8000"
+
+  notification-service:
+    build: services/notification-service
+    ports:
+      - "8008:8000"
+
+  sync-service:
+    build: services/sync-service
+    ports:
+      - "8009:8000"
+
+  analytics-service:
+    build: services/analytics-service
+    ports:
+      - "8010:8000"
