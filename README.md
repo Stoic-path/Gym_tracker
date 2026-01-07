@@ -51,16 +51,20 @@ Una vez clonado el repositorio, instala las dependencias del espacio de trabajo 
 ```bash
 pnpm install
 ```
+---
 ## 🏃‍♂️ Comandos de Ejecución
 
 Moonrepo orquesta las tareas de desarrollo. Puedes ejecutar comandos en un solo servicio o en todos a la vez utilizando la sintaxis de dos puntos (`:`).
 
 ### 1. Desarrollo Local
-Para levantar el servidor de desarrollo de un microservicio específico (ej: Auth Service):
+Para levantar servidores de desarrollo específicos:
 
 ```bash
-# Ejecuta 'python manage.py runserver' encapsulado
+# Backend: Levantar un microservicio (ej: Auth Service)
 moon run auth-service:dev
+
+# Frontend: Levantar la aplicación Web (React)
+moon run web:dev
 ```
 
 ### 2. Verificación Global (Lint)
