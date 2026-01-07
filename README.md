@@ -44,10 +44,35 @@ Para generar nuevos microservicios o ejecutar comandos de Django, asegúrate de 
 ```bash
 # Instalación de herramientas de scaffolding
 py -m pip install "django>=5.0" "djangorestframework>=3.14"
-
+```
 ### 2. Frontend & Toolchain (Raíz del Monorepo)
 Una vez clonado el repositorio, instala las dependencias del espacio de trabajo (incluyendo la configuración de Moonrepo) ejecutando en la raíz:
 
 ```bash
 pnpm install
+```
+## 🏃‍♂️ Comandos de Ejecución
 
+Moonrepo orquesta las tareas de desarrollo. Puedes ejecutar comandos en un solo servicio o en todos a la vez utilizando la sintaxis de dos puntos (`:`).
+
+### 1. Desarrollo Local
+Para levantar el servidor de desarrollo de un microservicio específico (ej: Auth Service):
+
+```bash
+# Ejecuta 'python manage.py runserver' encapsulado
+moon run auth-service:dev
+```
+
+### 2. Verificación Global (Lint)
+Para verificar errores de configuración o sintaxis en **todos** los 10 microservicios simultáneamente:
+
+```bash
+moon run :lint
+```
+
+### 3. Pruebas Unitarias
+Para ejecutar la batería de tests en todos los servicios:
+
+```bash
+moon run :test
+```
