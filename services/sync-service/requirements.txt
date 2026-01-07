@@ -1,2 +1,4 @@
 ﻿Django>=5.0
 djangorestframework>=3.14
+
+django-redis>=5.3

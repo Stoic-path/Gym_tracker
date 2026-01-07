@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
+from pymongo import MongoClient
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -79,6 +80,16 @@ DATABASES = {
     }
 }
 
+# MONGO CONFIGURATION
+# ------------------------------------------------------------------------------
+MONGO_URI = os.environ.get('MONGO_URI')
+
+if MONGO_URI:
+    client = MongoClient(MONGO_URI)
+    db = client['gym_workout_db'] # Nombre de la base de datos dentro de Mongo
+    print(f"✅ CONECTADO A MONGODB: {MONGO_URI.split('@')[1]}") # Log para confirmar
+else:
+    print("⚠️ ADVERTENCIA: No se encontró MONGO_URI, usando almacenamiento local.")
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -115,3 +126,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
