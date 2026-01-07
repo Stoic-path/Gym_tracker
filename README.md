@@ -1,82 +1,123 @@
-# GymTrack Cloud
+# GymTrack Cloud 🏋️‍♂️☁️
 
-Sistema de seguimiento de entrenamiento de fuerza distribuido para la Universidad Central del Ecuador.
+**Distributed Workout Tracking System** *Faculty of Physical Education - Universidad Central del Ecuador*
 
-## 🏗️ Arquitectura del Proyecto
+## 📖 Project Overview
 
-Este repositorio es un **Monorepo Políglota** gestionado con **Moonrepo**. Integra servicios de Backend en Python y aplicaciones de Frontend en JavaScript/Dart.
+GymTrack Cloud is a distributed system designed to track strength training, routines, and physical progress. Based on the **DraftReport3** specifications, this project implements a **Microservices Architecture** with **Polyglot Persistence**, tailored for a high-concurrency academic environment.
 
-### Estructura General
-* **`apps/`**: Aplicaciones Cliente (Mobile, Web, Desktop).
-* **`services/`**: Microservicios Backend (Django REST Framework).
-* **`packages/`**: Librerías compartidas y lógica de negocio común.
-* **`infra/`**: Infraestructura como Código (Terraform).
+The system supports multiple client platforms (Web, Mobile, Desktop) and manages data flow through a hybrid infrastructure of Relational, Document-oriented, and Key-Value databases.
 
 ---
 
-## 🛠️ Herramientas de Desarrollo (Dev Tools)
+## 🏗 Architecture & Monorepo Structure
 
-Para levantar el entorno de desarrollo y colaborar en este repositorio, asegúrate de tener instalado lo siguiente:
+This repository is a **Polyglot Monorepo** managed by **Moonrepo**. It organizes the codebase into three main workspaces to support the multi-platform requirements outlined in the technical report.
 
-### Requisitos Globales
-Estas herramientas deben estar instaladas en tu sistema operativo para ejecutar los scripts de inicialización y orquestación:
+### Directory Structure
 
-* **Lenguajes Base:**
-    * **Python:** `3.13.11` (Requerido para Backend y Scripts de Scaffolding).
-    * **Node.js:** `v24.12.0` (Requerido para el entorno de Frontend).
-
-* **Gestores de Paquetes:**
-    * **`pip`**: Para instalar dependencias globales de Python (ej: Django).
-    * **`pnpm`**: Para gestionar dependencias de Node y Workspaces.
-        * *Instalación:* `npm install -g pnpm`
-
-* **Orquestador:**
-    * **Moonrepo:** Herramienta de gestión del monorepo.
-        * *Instalación:* `npm install -g @moonrepo/cli`
+* **`apps/`**: Client-side applications.
+    * `web/`: React application for Users and Admin dashboard.
+    * *(Planned)* `mobile/`: Flutter application for gym tracking.
+    * *(Planned)* `desktop/`: Electron/Tauri app for kiosk mode.
+* **`services/`**: The 10 Backend Microservices (Django REST Framework).
+* **`packages/`**: Shared libraries, UI kits, and common logic.
+* **`infra/`**: Infrastructure as Code (Terraform & Docker).
 
 ---
 
-## 🚀 Inicialización Rápida
+## 🧩 Microservices & Infrastructure Map
 
-### 1. Backend (Django)
-Para generar nuevos microservicios o ejecutar comandos de Django, asegúrate de tener las librerías base:
+In accordance with the architectural definitions, the system is divided into domain-specific services, each with its own database responsibility.
+
+| Service Name | Port | Database | Pattern/Type | Responsibility |
+| :--- | :--- | :--- | :--- | :--- |
+| **Auth Service** | `8001` | Postgres + Redis | Hybrid | Identity, JWT, Session mgmt |
+| **User Profile** | `8002` | Postgres | Relational | Demographics, Body measurements |
+| **Routine** | `8005` | Postgres | Relational | Training plans structure |
+| **Analytics** | `8010` | Postgres | Analytical | Progress stats & Reporting |
+| **Workout Cmd** | `8003` | MongoDB | **CQRS (Write)** | High-volume workout logging |
+| **Workout Query** | `8004` | MongoDB | **CQRS (Read)** | Workout history retrieval |
+| **Exercise Lib** | `8006` | MongoDB | Document | Catalog of exercises/equipment |
+| **Video** | `8007` | MongoDB | Document | Metadata for instructional videos |
+| **Notification** | `8008` | Redis | Queue | Async Email/Push delivery |
+| **Sync** | `8009` | Redis | Queue | Offline/Online synchronization |
+| **Web Client** | `3000` | N/A | SPA | Frontend Interface |
+
+### Data Infrastructure (Dockerized)
+* **PostgreSQL 15** (`:5432`): Primary Source of Truth for structured data.
+* **MongoDB 6** (`:27017`): Document store for polymorphic data (Workouts/Videos).
+* **Redis 7** (`:6379`): In-memory cache, session store, and message broker.
+
+---
+
+## 🛠 Prerequisites
+
+To run this project, you need the following tools installed globally:
+
+1.  **Container Runtime:** Docker Desktop & Docker Compose.
+2.  **Monorepo Toolchain:**
+    * Node.js (v20+) & `pnpm`
+    * Moonrepo: `npm install -g @moonrepo/cli`
+3.  **Language Runtimes (for local dev):**
+    * Python 3.13+
+
+---
+
+## 🚀 Getting Started
+
+### 1. Infrastructure Setup (Docker)
+The recommended way to run the full system is via Docker Compose, which simulates the AWS EC2 topology.
 
 ```bash
-# Instalación de herramientas de scaffolding
-py -m pip install "django>=5.0" "djangorestframework>=3.14"
+# 1. Clone the repository
+git clone <repo-url>
+cd Gym_tracker
+
+# 2. Build and Start all services and databases
+docker compose up --build -d
+
+# 3. Check status
+docker compose ps
 ```
-### 2. Frontend & Toolchain (Raíz del Monorepo)
-Una vez clonado el repositorio, instala las dependencias del espacio de trabajo (incluyendo la configuración de Moonrepo) ejecutando en la raíz:
-
+### 2. Database Initialization
+Once containers are running, apply migrations to initialize the PostgreSQL schemas. MongoDB and Redis do not require schema migrations.
 ```bash
+# Initialize Auth (Users/Groups)
+docker compose exec auth-service python manage.py migrate
+
+# Initialize other Relational Services
+docker compose exec user-profile-service python manage.py migrate
+docker compose exec routine-service python manage.py migrate
+docker compose exec analytics-service python manage.py migrate
+```
+### 3. Development Workflow (Moonrepo)
+Use Moonrepo to run tasks across the monorepo without Dockerizing everything (useful for quick logic iteration).
+```bash
+# Install workspace dependencies
 pnpm install
-```
----
-## 🏃‍♂️ Comandos de Ejecución
 
-Moonrepo orquesta las tareas de desarrollo. Puedes ejecutar comandos en un solo servicio o en todos a la vez utilizando la sintaxis de dos puntos (`:`).
+# Run linting across all 10 microservices
+moon run :lint
 
-### 1. Desarrollo Local
-Para levantar servidores de desarrollo específicos:
+# Run unit tests for a specific service
+moon run auth-service:test
 
-```bash
-# Backend: Levantar un microservicio (ej: Auth Service)
-moon run auth-service:dev
-
-# Frontend: Levantar la aplicación Web (React)
+# Start the Web Frontend locally
 moon run web:dev
 ```
+## ☁️ Deployment Strategy
 
-### 2. Verificación Global (Lint)
-Para verificar errores de configuración o sintaxis en **todos** los 10 microservicios simultáneamente:
+The architecture supports multiple deployment environments:
 
-```bash
-moon run :lint
-```
+### Local Development
+* **Docker Compose**: Current setup for local development and testing.
 
-### 3. Pruebas Unitarias
-Para ejecutar la batería de tests en todos los servicios:
+### Cloud (AWS)
+The architecture is designed to be deployed on AWS EC2 instances managed by Terraform, adhering to the "Infrastructure Cost Estimation" section of the report.
 
-```bash
-moon run :test
-```
+| Component | AWS Service | Description |
+| :--- | :--- | :--- |
+| **PostgreSQL** | EC2 Instance | Primary relational database server |
+| **MongoDB** | EC2 Instance | Document store server |
+| **Microservices** | EC2 / Auto Scaling Groups | Application layer with horizontal scaling |
