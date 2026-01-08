@@ -29,9 +29,9 @@ jobs:
       # 3. Validar Código (Lint) - Requerido en las 3 ramas según reporte
       - name: Run Lint
         run: moon run :lint
-        continue-on-error: true 
+        #continue-on-error: true 
 
       # 4. Pruebas Unitarias - Requerido en las 3 ramas según reporte
       - name: Run Tests
         run: moon run :test
-        continue-on-error: true
+        #continue-on-error: true
