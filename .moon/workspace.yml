@@ -8,3 +8,8 @@ projects:
   - 'services/*'
   - 'packages/*'
   - 'infra'
+
+vcs:
+  manager: 'git'
+  provider: 'github'
+  defaultBranch: 'main'  
