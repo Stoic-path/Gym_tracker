@@ -76,13 +76,13 @@ WSGI_APPLICATION = 'app.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases Por defecto
+# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
     'default': dj_database_url.config(
-        # Si no hay variable de entorno (ej: en local sin Docker), usa SQLite por defecto
+        # If no env variable (e.g., local without Docker), use SQLite by default
         default='sqlite:///db.sqlite3',
-        # Mantiene la conexión viva para mejor rendimiento en Docker
+        # Keep connection alive for better performance in Docker
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -102,7 +102,7 @@ CACHES = {
     }
 }
 
-# Opcional: Usar Redis también para guardar las sesiones de usuario (Login)
+# Optional: Use Redis also for storing user sessions (Login)
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 

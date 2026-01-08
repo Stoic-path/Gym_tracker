@@ -4,12 +4,12 @@ language: 'javascript'
 platform: 'node'
 
 tasks:
-  # Servidor de desarrollo (moon run web:dev)
+  # Development server (moon run web:dev)
   dev:
     command: 'vite'
     local: true
 
-  # Construcción para producción (moon run web:build)
+  # Production build (moon run web:build)
   build:
     command: 'vite build'
     outputs:

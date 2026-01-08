@@ -1,31 +1,31 @@
-﻿# --- Etapa 1: Construcción (Builder) ---
+﻿# --- Stage 1: Build (Builder) ---
 FROM node:22-alpine AS builder
 
-# Habilitar pnpm mediante corepack (nativo en Node nuevos)
+# Enable pnpm via corepack (native in newer Node versions)
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copiamos primero los archivos de dependencia para aprovechar caché de Docker
+# Copy dependency files first to leverage Docker cache
 COPY package.json ./
 
-# Instalamos dependencias
+# Install dependencies
 RUN pnpm install
 
-# Copiamos el resto del código
+# Copy the rest of the code
 COPY . .
 
-# Construimos la aplicación (genera la carpeta /dist)
+# Build the application (generates /dist folder)
 RUN pnpm build
 
-# --- Etapa 2: Servidor Producción (Nginx) ---
+# --- Stage 2: Production Server (Nginx) ---
 FROM nginx:alpine
 
-# Copiamos los archivos construidos desde la etapa anterior
+# Copy built files from the previous stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuración básica para SPA (Single Page Application)
-# Esto evita errores 404 al recargar páginas internas
+# Basic configuration for SPA (Single Page Application)
+# This prevents 404 errors when reloading internal pages
 RUN echo 'server { \
     listen 80; \
     location / { \

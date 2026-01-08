@@ -1,14 +1,14 @@
 # .github/workflows/ci.yml
 name: CI (Lint & Test)
 
-# Se ejecuta en pushes a cualquier rama clave para cumplir con la Sección 7.2
+# Runs on pushes to key branches as per Section 7.2
 on:
   push:
     branches:
-      - 'feature/*'  # 
-      - 'develop'    # 
-      - 'main'       # 
-  pull_request:      # También en los PRs para ver el check verde antes de aceptar
+      - 'feature/*'
+      - 'develop'
+      - 'main'
+  pull_request:      # Also on PRs to see green check before accepting
 
 jobs:
   ci:
@@ -18,30 +18,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # 1. Instalar PNPM (Vital para que Moon encuentre el comando)
-      - uses: pnpm/action-setup@v4  # <--- NUEVO
+
+      # 1. Install PNPM (Required for Moon to find the command)
+      - uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      # 2. Instalar Node.js (Requerido por PNPM)
-      - uses: actions/setup-node@v4 # <--- NUEVO
+      # 2. Install Node.js (Required by PNPM)
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
 
-      # 3. Instalar Moonrepo
+      # 3. Install Moonrepo
       - uses: moonrepo/setup-moon-action@v1
 
-      # 4. Instalar Toolchain
+      # 4. Install Toolchain
       - name: Install Toolchain
         run: moon setup
 
-      # 5. Validar Código (Lint) - Estricto
+      # 5. Code Validation (Lint) - Strict
       - name: Run Lint
         run: moon run :lint
-        # continue-on-error: true  <-- Mantenlo comentado
+        # continue-on-error: true  <-- Keep commented
 
-      # 6. Pruebas Unitarias - Estricto
+      # 6. Unit Tests - Strict
       - name: Run Tests
         run: moon run :test
-        # continue-on-error: true  <-- Mantenlo comentado
+        # continue-on-error: true  <-- Keep commented

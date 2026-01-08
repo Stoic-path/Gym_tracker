@@ -1,28 +1,28 @@
-﻿# Imagen base oficial de Python (ligera)
+﻿# Official Python base image (lightweight)
 FROM python:3.13.11-slim
 
-# Evita que Python genere archivos .pyc y fuerza salida en consola en tiempo real
+# Prevent Python from generating .pyc files and force real-time console output
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Directorio de trabajo dentro del contenedor
+# Working directory inside the container
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias (opcional pero recomendado para postgress/otros drivers)
+# Install system dependencies (optional but recommended for postgres/other drivers)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar dependencias e instalarlas
+# Copy dependencies and install them
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el código fuente del proyecto
+# Copy project source code
 COPY . .
 
-# Exponer el puerto estándar (interno del contenedor)
+# Expose standard port (internal to container)
 EXPOSE 8000
 
-# Comando por defecto al iniciar
+# Default command on startup
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

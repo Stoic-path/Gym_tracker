@@ -1,7 +1,7 @@
 services:
-  # --- INFRAESTRUCTURA DE DATOS (Simulando tus futuras EC2) ---
+  # --- DATA INFRASTRUCTURE (Simulating your future EC2 instances) ---
   
-  # Base de Datos Relacional (Compartida para Auth, Profile, Routine)
+  # Relational Database (Shared for Auth, Profile, Routine)
   postgres:
     image: postgres:15-alpine
     container_name: gym-postgres
@@ -15,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # Base de Datos NoSQL (Para Workout Command/Query y Analytics)
+  # NoSQL Database (For Workout Command/Query and Analytics)
   mongo:
     image: mongo:6.0
     container_name: gym-mongo
@@ -28,7 +28,7 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  # Caché y Colas de Mensajes (Para Sync y Auth)
+  # Cache and Message Queues (For Sync and Auth)
   redis:
     image: redis:7-alpine
     container_name: gym-redis
@@ -38,7 +38,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # --- APLICACIONES (FRONTEND) ---
+  # --- APPLICATIONS (FRONTEND) ---
   web:
     build: apps/web
     ports:
@@ -46,21 +46,21 @@ services:
     depends_on:
       - auth-service
 
-  # --- MICROSERVICIOS BACKEND ---
-  # Nota: Aún no están conectados a las BDs nuevas, eso lo haremos en settings.py
+  # --- BACKEND MICROSERVICES ---
+  # Note: Not yet connected to new DBs, will configure in settings.py
   
   auth-service:
     build: services/auth-service
     ports:
       - "8001:8000"
     volumes:
-      - ./services/auth-service:/app  # <--- ESTA ES LA LÍNEA MÁGICA
+      - ./services/auth-service:/app  # <--- HOT RELOAD LINE
     depends_on:
       - postgres
       - redis
     environment:
       - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
-      - REDIS_URL=redis://redis:6379/1  # Usamos la base 1 para Auth  
+      - REDIS_URL=redis://redis:6379/1  # Using database 1 for Auth  
       
   user-profile-service:
     build: services/user-profile-service
@@ -122,7 +122,7 @@ services:
     depends_on:
       - redis
     environment:
-      - REDIS_URL=redis://redis:6379/3  # Usamos la base 3 para Notificaciones
+      - REDIS_URL=redis://redis:6379/3  # Using database 3 for Notifications
 
   sync-service:
     build: services/sync-service
@@ -131,7 +131,7 @@ services:
     depends_on:
       - redis
     environment:
-      - REDIS_URL=redis://redis:6379/2  # Usamos la base 2 para Sync
+      - REDIS_URL=redis://redis:6379/2  # Using database 2 for Sync
 
   analytics-service:
     build: services/analytics-service

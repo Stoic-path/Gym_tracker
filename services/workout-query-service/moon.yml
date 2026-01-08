@@ -7,18 +7,18 @@ toolchain:
     version: '3.13.11'
 
 tasks:
-  # Tarea para desarrollo local (moon run auth-service:dev)
+  # Local development task (moon run workout-query-service:dev)
   dev:
     command: 'python manage.py runserver 0.0.0.0:8000'
     local: true
     platform: 'system'
 
-  # Tarea de Linting (moon run :lint)
+  # Linting task (moon run :lint)
   lint:
     command: 'python manage.py check'
     platform: 'system'
 
-  # Tarea de Pruebas (moon run :test)
+  # Testing task (moon run :test)
   test:
     command: 'python manage.py test'
     platform: 'system'

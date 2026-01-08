@@ -1,10 +1,10 @@
 $schema: 'https://moonrepo.dev/schemas/project.json'
 
-# Configuración base para el proyecto raíz
+# Base configuration for root project
 type: 'application'
 language: 'unknown'
 
-# Definimos que Moonrepo gestione todo lo que esté en estas carpetas
+# Define Moonrepo to manage everything in these folders
 workspace:
   projects:
     - 'apps/*'

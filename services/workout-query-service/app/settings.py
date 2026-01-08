@@ -86,12 +86,12 @@ MONGO_URI = os.environ.get('MONGO_URI')
 
 if MONGO_URI:
     client = MongoClient(MONGO_URI)
-    # Usamos una DB distinta o la misma, para simplificar usaremos la misma 'gym_workout_db' 
-    # o podrías poner 'gym_video_db' en el video-service si prefieres separar.
+    # Using a different DB or the same one, for simplicity we'll use 'gym_data_db'
+    # or you could use 'gym_video_db' in video-service if you prefer separation.
     db = client['gym_data_db'] 
-    print(f"✅ CONECTADO A MONGODB: {MONGO_URI.split('@')[1]}")
+    print(f"✅ CONNECTED TO MONGODB: {MONGO_URI.split('@')[1]}")
 else:
-    print("⚠️ ADVERTENCIA: No se encontró MONGO_URI.")
+    print("⚠️ WARNING: MONGO_URI not found.")
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

@@ -94,7 +94,7 @@ CACHES = {
     }
 }
 
-# Opcional: Usar Redis también para guardar las sesiones de usuario (Login)
+# Optional: Use Redis also for storing user sessions (Login)
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 
