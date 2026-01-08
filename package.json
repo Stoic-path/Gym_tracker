@@ -1,0 +1,17 @@
+{
+  "name": "gymtrack-cloud-root",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*",
+    "infra"
+  ],
+  "scripts": {
+    "postinstall": "moon sync"
+  },
+  "engines": {
+    "node": "24.12.0"
+  }
+}

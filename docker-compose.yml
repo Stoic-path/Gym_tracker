@@ -1,0 +1,149 @@
+services:
+  # --- INFRAESTRUCTURA DE DATOS (Simulando tus futuras EC2) ---
+  
+  # Base de Datos Relacional (Compartida para Auth, Profile, Routine)
+  postgres:
+    image: postgres:15-alpine
+    container_name: gym-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=gym_user
+      - POSTGRES_PASSWORD=gym_password
+      - POSTGRES_DB=gym_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Base de Datos NoSQL (Para Workout Command/Query y Analytics)
+  mongo:
+    image: mongo:6.0
+    container_name: gym-mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=gym_mongo_user
+      - MONGO_INITDB_ROOT_PASSWORD=gym_mongo_pass
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Caché y Colas de Mensajes (Para Sync y Auth)
+  redis:
+    image: redis:7-alpine
+    container_name: gym-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # --- APLICACIONES (FRONTEND) ---
+  web:
+    build: apps/web
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+
+  # --- MICROSERVICIOS BACKEND ---
+  # Nota: Aún no están conectados a las BDs nuevas, eso lo haremos en settings.py
+  
+  auth-service:
+    build: services/auth-service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./services/auth-service:/app  # <--- ESTA ES LA LÍNEA MÁGICA
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+      - REDIS_URL=redis://redis:6379/1  # Usamos la base 1 para Auth  
+      
+  user-profile-service:
+    build: services/user-profile-service
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+
+  workout-command-service:
+    build: services/workout-command-service
+    ports:
+      - "8003:8000"
+    depends_on:
+      - mongo
+    environment:
+      # Formato: mongodb://usuario:password@host:puerto
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  workout-query-service:
+    build: services/workout-query-service
+    ports:
+      - "8004:8000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  routine-service:
+    build: services/routine-service
+    ports:
+      - "8005:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+
+  exercise-library-service:
+    build: services/exercise-library-service
+    ports:
+      - "8006:8000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  video-service:
+    build: services/video-service
+    ports:
+      - "8007:8000"
+    environment:
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  notification-service:
+    build: services/notification-service
+    ports:
+      - "8008:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/3  # Usamos la base 3 para Notificaciones
+
+  sync-service:
+    build: services/sync-service
+    ports:
+      - "8009:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/2  # Usamos la base 2 para Sync
+
+  analytics-service:
+    build: services/analytics-service
+    ports:
+      - "8010:8000"
+    depends_on:
+      - postgres
+      - mongo
+    environment:
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
