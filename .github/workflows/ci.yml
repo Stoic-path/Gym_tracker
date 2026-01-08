@@ -18,20 +18,30 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # 1. Instalar PNPM (Vital para que Moon encuentre el comando)
+      - uses: pnpm/action-setup@v4  # <--- NUEVO
+        with:
+          version: 9
 
-      # 1. Instalar Moonrepo
+      # 2. Instalar Node.js (Requerido por PNPM)
+      - uses: actions/setup-node@v4 # <--- NUEVO
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # 3. Instalar Moonrepo
       - uses: moonrepo/setup-moon-action@v1
 
-      # 2. Instalar Toolchain (Node + Python según .moon/toolchain.yml)
+      # 4. Instalar Toolchain
       - name: Install Toolchain
         run: moon setup
 
-      # 3. Validar Código (Lint) - Requerido en las 3 ramas según reporte
+      # 5. Validar Código (Lint) - Estricto
       - name: Run Lint
         run: moon run :lint
-        #continue-on-error: true 
+        # continue-on-error: true  <-- Mantenlo comentado
 
-      # 4. Pruebas Unitarias - Requerido en las 3 ramas según reporte
+      # 6. Pruebas Unitarias - Estricto
       - name: Run Tests
         run: moon run :test
-        #continue-on-error: true
+        # continue-on-error: true  <-- Mantenlo comentado
