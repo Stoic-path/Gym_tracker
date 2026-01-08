@@ -53,6 +53,8 @@ services:
     build: services/auth-service
     ports:
       - "8001:8000"
+    volumes:
+      - ./services/auth-service:/app  # <--- ESTA ES LA LÍNEA MÁGICA
     depends_on:
       - postgres
       - redis
