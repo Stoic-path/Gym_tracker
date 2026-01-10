@@ -4,7 +4,7 @@
 
 ## 📖 Project Overview
 
-GymTrack Cloud is a distributed system designed to track strength training, routines, and physical progress. Based on the **DraftReport3** specifications, this project implements a **Microservices Architecture** with **Polyglot Persistence**, tailored for a high-concurrency academic environment.
+GymTrack Cloud is a distributed system designed to track strength training, routines, and physical progress. This project implements a **Microservices Architecture** with **Polyglot Persistence**, tailored for a high-concurrency academic environment and deployed on AWS using Infrastructure as Code (IaC).
 
 The system supports multiple client platforms (Web, Mobile, Desktop) and manages data flow through a hybrid infrastructure of Relational, Document-oriented, and Key-Value databases.
 
@@ -12,112 +12,132 @@ The system supports multiple client platforms (Web, Mobile, Desktop) and manages
 
 ## 🏗 Architecture & Monorepo Structure
 
-This repository is a **Polyglot Monorepo** managed by **Moonrepo**. It organizes the codebase into three main workspaces to support the multi-platform requirements outlined in the technical report.
+This repository is a **Polyglot Monorepo** managed by **Moonrepo**. It organizes the codebase into three main workspaces.
 
 ### Directory Structure
 
 * **`apps/`**: Client-side applications.
-    * `web/`: React application for Users and Admin dashboard.
-    * *(Planned)* `mobile/`: Flutter application for gym tracking.
-    * *(Planned)* `desktop/`: Electron/Tauri app for kiosk mode.
+    * `web/`: React application (Vite) for Users and Admin dashboard.
+    * *(Planned)* `mobile/`: Flutter application.
+    * *(Planned)* `desktop/`: Electron/Tauri app.
 * **`services/`**: The 10 Backend Microservices (Django REST Framework).
-* **`packages/`**: Shared libraries, UI kits, and common logic.
-* **`infra/`**: Infrastructure as Code (Terraform & Docker).
+* **`packages/`**: Shared libraries and UI kits.
+* **`infra/`**: Infrastructure as Code (Terraform) and Setup Scripts.
 
 ---
 
 ## 🧩 Microservices & Infrastructure Map
 
-In accordance with the architectural definitions, the system is divided into domain-specific services, each with its own database responsibility.
+The system is divided into domain-specific services, communicating via HTTP/REST within a private VPC.
 
-| Service Name | Port | Database | Pattern/Type | Responsibility |
+| Service Name | Port | Database | Technology | Responsibility |
 | :--- | :--- | :--- | :--- | :--- |
-| **Auth Service** | `8001` | Postgres + Redis | Hybrid | Identity, JWT, Session mgmt |
-| **User Profile** | `8002` | Postgres | Relational | Demographics, Body measurements |
-| **Routine** | `8005` | Postgres | Relational | Training plans structure |
-| **Analytics** | `8010` | Postgres | Analytical | Progress stats & Reporting |
-| **Workout Cmd** | `8003` | MongoDB | **CQRS (Write)** | High-volume workout logging |
-| **Workout Query** | `8004` | MongoDB | **CQRS (Read)** | Workout history retrieval |
-| **Exercise Lib** | `8006` | MongoDB | Document | Catalog of exercises/equipment |
-| **Video** | `8007` | MongoDB | Document | Metadata for instructional videos |
-| **Notification** | `8008` | Redis | Queue | Async Email/Push delivery |
-| **Sync** | `8009` | Redis | Queue | Offline/Online synchronization |
-| **Web Client** | `3000` | N/A | SPA | Frontend Interface |
+| **Auth Service** | `8001` | Postgres | Django/SQL | Identity, JWT, RBAC |
+| **User Profile** | `8002` | Postgres | Django/SQL | Demographics, Body measurements |
+| **Routine** | `8006` | Postgres | Django/SQL | Training plans structure |
+| **Analytics** | `8007` | Postgres | Django/SQL | Progress stats & Reporting |
+| **Notification** | `8008` | Postgres* | Django/SQL | Async Email/Push logs (*Uses Redis for Queue) |
+| **Workout Cmd** | `8003` | MongoDB | Django/Djongo | **CQRS (Write)** - Workout logging |
+| **Workout Query** | `8004` | MongoDB | Django/Djongo | **CQRS (Read)** - History retrieval |
+| **Exercise Lib** | `8005` | MongoDB | Django/Djongo | Catalog of exercises |
+| **Video** | `8009` | MongoDB | Django/Djongo | Video Metadata |
+| **Sync** | `8010` | Redis* | Django/SQLite | Offline sync state (*Uses Redis as primary store) |
+| **Web Client** | `80` | N/A | React/Nginx | Frontend Interface served via ALB |
 
-### Data Infrastructure (Dockerized)
-* **PostgreSQL 15** (`:5432`): Primary Source of Truth for structured data.
-* **MongoDB 6** (`:27017`): Document store for polymorphic data (Workouts/Videos).
-* **Redis 7** (`:6379`): In-memory cache, session store, and message broker.
+### Cloud Infrastructure (AWS)
+* **Application Load Balancer (ALB):** Public entry point, handles SSL and routing rules.
+* **Auto Scaling Groups (ASG):** One ASG per microservice for high availability.
+* **Polyglot Persistence Layer (EC2):**
+    * **PostgreSQL:** Primary relational store.
+    * **MongoDB:** Document store for complex structures.
+    * **Redis:** In-memory cache and message broker.
 
 ---
 
 ## 🛠 Prerequisites
 
-To run this project, you need the following tools installed globally:
+To develop or deploy this project, you need:
 
-1.  **Container Runtime:** Docker Desktop & Docker Compose.
-2.  **Monorepo Toolchain:**
+1.  **Development:**
     * Node.js (v20+) & `pnpm`
+    * Python 3.10+
     * Moonrepo: `npm install -g @moonrepo/cli`
-3.  **Language Runtimes (for local dev):**
-    * Python 3.13+
+    * Docker Desktop
+2.  **Deployment (DevOps):**
+    * Terraform (v1.5+)
+    * AWS CLI (configured with valid credentials)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (Local Development)
 
-### 1. Infrastructure Setup (Docker)
-The recommended way to run the full system is via Docker Compose, which simulates the AWS EC2 topology.
+The recommended way to run the full system locally is via Docker Compose.
 
 ```bash
 # 1. Clone the repository
 git clone <repo-url>
 cd Gym_tracker
 
-# 2. Build and Start all services and databases
+# 2. Build and Start all services
 docker compose up --build -d
 
 # 3. Check status
 docker compose ps
 ```
-### 2. Database Initialization
-Once containers are running, apply migrations to initialize the PostgreSQL schemas. MongoDB and Redis do not require schema migrations.
-```bash
-# Initialize Auth (Users/Groups)
-docker compose exec auth-service python manage.py migrate
 
-# Initialize other Relational Services
-docker compose exec user-profile-service python manage.py migrate
-docker compose exec routine-service python manage.py migrate
-docker compose exec analytics-service python manage.py migrate
-```
-### 3. Development Workflow (Moonrepo)
-Use Moonrepo to run tasks across the monorepo without Dockerizing everything (useful for quick logic iteration).
+### Moonrepo Workflow
+Use Moonrepo for fast local linting and testing without full containerization.
+
 ```bash
-# Install workspace dependencies
+# Install dependencies
 pnpm install
 
-# Run linting across all 10 microservices
+# Run linting across all services
 moon run :lint
 
-# Run unit tests for a specific service
+# Run tests for a specific service
 moon run auth-service:test
 
-# Start the Web Frontend locally
+# Start frontend locally
 moon run web:dev
 ```
-## ☁️ Deployment Strategy
 
-The architecture supports multiple deployment environments:
+---
 
-### Local Development
-* **Docker Compose**: Current setup for local development and testing.
+## ☁️ Deployment Guide (AWS)
+This project uses Terraform to provision the infrastructure and GitHub Actions for CI/CD.
 
-### Cloud (AWS)
-The architecture is designed to be deployed on AWS EC2 instances managed by Terraform, adhering to the "Infrastructure Cost Estimation" section of the report.
+### 1. Infrastructure Provisioning (Terraform)
 
-| Component | AWS Service | Description |
-| :--- | :--- | :--- |
-| **PostgreSQL** | EC2 Instance | Primary relational database server |
-| **MongoDB** | EC2 Instance | Document store server |
-| **Microservices** | EC2 / Auto Scaling Groups | Application layer with horizontal scaling |
+We use a "Fire and Forget" strategy for the initial infrastructure creation.
+
+```bash
+cd infra/terraform/environments/develop
+
+# Initialize Terraform
+terraform init
+
+# Preview changes
+terraform plan
+
+# Apply infrastructure (Creates VPC, EC2s, ALB, ASGs)
+terraform apply
+```
+
+> **Note:** This generates the `alb_dns_name` and private `database_ips` required for the application configuration.
+
+### 2. Continuous Deployment (CI/CD)
+
+The software delivery is automated via GitHub Actions:
+
+* **CI:** Builds Docker images for all services and pushes them to DockerHub.
+* **CD:** Triggers an Instance Refresh in AWS Auto Scaling Groups to pull the new images and update the running containers with zero downtime.
+
+### 3. Environment Configuration
+
+The services are configured to be Cloud Native. They automatically detect whether they are running locally (Docker Compose) or in AWS (Terraform) by checking environment variables:
+
+* `DB_HOST`: Injected by Terraform User Data.
+* `REDIS_HOST`: Injected by Terraform User Data.
+* `VITE_API_URL`: Configured in Frontend build time.
+
