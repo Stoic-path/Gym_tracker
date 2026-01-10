@@ -16,7 +16,33 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+from profiles.models import UserProfile
+
+class UserProfileView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        try:
+            profile = UserProfile.objects.first()
+            if not profile:
+                 return Response({"username": "No DB Data", "email": "seed@me.pls"}, status=200)
+            
+            return Response({
+                "id": profile.user_id,
+                "username": profile.full_name,
+                "email": profile.email,
+                "bio": profile.bio,
+                "source": "PostgreSQL Database"
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/users/me', UserProfileView.as_view()),
 ]
