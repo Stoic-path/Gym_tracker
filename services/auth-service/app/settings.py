@@ -74,29 +74,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# --- Database Configuration ---
+# Retrieve DB connection details from environment variables injected by Terraform.
+# Defaults to 'localhost' for local development using Docker Compose.
+DB_HOST = os.environ.get('DB_HOST', 'localhost')
+DB_PORT = os.environ.get('DB_PORT', '5432')
+DB_NAME = 'auth_db'  # NOTE: Ensure this matches the specific service DB name
+DB_USER = 'gym_user'
+DB_PASSWORD = 'gym_password_123'
 
 DATABASES = {
-    'default': dj_database_url.config(
-        # If no env variable (e.g., local without Docker), use SQLite by default
-        default='sqlite:///db.sqlite3',
-        # Keep connection alive for better performance in Docker
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
+    }
 }
 
-# REDIS CONFIGURATION
-# ------------------------------------------------------------------------------
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+# --- Redis Configuration (Cache/Queue) ---
+# Used by Celery or Django Cache
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
