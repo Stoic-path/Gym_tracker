@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import dj_database_url
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,20 +49,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# --- Database Configuration (PostgreSQL) ---
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = 'routine_db' # Matches setup_postgres.sh
+# --- Database Configuration ---
+# Usamos dj_database_url para parsear la conexión automáticamente.
+# Terraform nos pasará la variable DATABASE_URL con el formato:
+# postgres://usuario:password@IP_EC2:5432/nombre_db
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DB_NAME,
-        'USER': 'gym_user',
-        'PASSWORD': 'gym_password_123',
-        'HOST': DB_HOST,
-        'PORT': DB_PORT,
-    }
+    'default': dj_database_url.config(
+        # Si no hay variable de entorno (ej. local sin docker), usa SQLite por defecto
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=False  # Importante: En red interna de AWS Academy no usamos SSL para la DB
+    )
 }
 
 # --- Redis Configuration ---
