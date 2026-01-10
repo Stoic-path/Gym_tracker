@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose standard port (internal to container)
-EXPOSE 8006
+EXPOSE 8005
 
 # Default command on startup
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8006"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8005"]

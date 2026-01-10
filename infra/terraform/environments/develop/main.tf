@@ -154,6 +154,14 @@ resource "aws_security_group" "app_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
+  # Permitir SSH (Para depuración manual)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port = 0
     to_port   = 0
@@ -268,9 +276,10 @@ resource "aws_lb_target_group" "web" {
   }
 }
 
-resource "aws_lb_target_group" "auth" {
-  name     = "tg-auth"
-  port     = 8001
+resource "aws_lb_target_group" "access_tgs" {
+  for_each = var.tg_access_group
+  name     = "tg-${each.key}"
+  port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   health_check {
@@ -279,9 +288,10 @@ resource "aws_lb_target_group" "auth" {
   }
 }
 
-resource "aws_lb_target_group" "user" {
-  name     = "tg-user"
-  port     = 8002
+resource "aws_lb_target_group" "core_tgs" {
+  for_each = var.tg_core_group
+  name     = "tg-${each.key}"
+  port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   health_check {
@@ -290,86 +300,10 @@ resource "aws_lb_target_group" "user" {
   }
 }
 
-resource "aws_lb_target_group" "work_cmd" {
-  name     = "tg-work-cmd"
-  port     = 8003
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "work_qry" {
-  name     = "tg-work-qry"
-  port     = 8004
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "exercise" {
-  name     = "tg-exercise"
-  port     = 8005
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "routine" {
-  name     = "tg-routine"
-  port     = 8006
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "analytics" {
-  name     = "tg-analytics"
-  port     = 8007
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "notify" {
-  name     = "tg-notify"
-  port     = 8008
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "video" {
-  name     = "tg-video"
-  port     = 8009
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-  health_check {
-    path    = "/"
-    matcher = "200-499"
-  }
-}
-
-resource "aws_lb_target_group" "sync" {
-  name     = "tg-sync"
-  port     = 8010
+resource "aws_lb_target_group" "heavy_tgs" {
+  for_each = var.tg_heavy_group
+  name     = "tg-${each.key}"
+  port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   health_check {
@@ -385,7 +319,7 @@ resource "aws_lb_listener_rule" "auth_rule" {
   priority     = 10
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.auth.arn
+    target_group_arn = aws_lb_target_group.access_tgs["auth"].arn
   }
   condition {
     path_pattern {
@@ -399,7 +333,7 @@ resource "aws_lb_listener_rule" "user_rule" {
   priority     = 20
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.user.arn
+    target_group_arn = aws_lb_target_group.access_tgs["user"].arn
   }
   condition {
     path_pattern {
@@ -413,7 +347,7 @@ resource "aws_lb_listener_rule" "work_cmd_rule" {
   priority     = 30
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.work_cmd.arn
+    target_group_arn = aws_lb_target_group.core_tgs["work_cmd"].arn
   }
   condition {
     path_pattern {
@@ -427,7 +361,7 @@ resource "aws_lb_listener_rule" "work_qry_rule" {
   priority     = 40
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.work_qry.arn
+    target_group_arn = aws_lb_target_group.core_tgs["work_qry"].arn
   }
   condition {
     path_pattern {
@@ -441,7 +375,7 @@ resource "aws_lb_listener_rule" "exercise_rule" {
   priority     = 50
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.exercise.arn
+    target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn
   }
   condition {
     path_pattern {
@@ -455,7 +389,7 @@ resource "aws_lb_listener_rule" "routine_rule" {
   priority     = 60
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.routine.arn
+    target_group_arn = aws_lb_target_group.core_tgs["routine"].arn
   }
   condition {
     path_pattern {
@@ -469,7 +403,7 @@ resource "aws_lb_listener_rule" "analytics_rule" {
   priority     = 70
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.analytics.arn
+    target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn
   }
   condition {
     path_pattern {
@@ -483,7 +417,7 @@ resource "aws_lb_listener_rule" "notify_rule" {
   priority     = 80
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.notify.arn
+    target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn
   }
   condition {
     path_pattern {
@@ -497,7 +431,7 @@ resource "aws_lb_listener_rule" "video_rule" {
   priority     = 90
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.video.arn
+    target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn
   }
   condition {
     path_pattern {
@@ -511,7 +445,7 @@ resource "aws_lb_listener_rule" "sync_rule" {
   priority     = 100
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.sync.arn
+    target_group_arn = aws_lb_target_group.access_tgs["sync"].arn
   }
   condition {
     path_pattern {
@@ -520,87 +454,16 @@ resource "aws_lb_listener_rule" "sync_rule" {
   }
 }
 
+
 # --- 4. COMPUTE (Launch Templates & ASGs) ---
 
-locals {
-  services = {
-    "web" = {
-      port = 80
-      image = "web"
-      tg_arn = aws_lb_target_group.web.arn
-      db_host = ""
-    }
-    "auth-service" = {
-      port = 8001
-      image = "auth-service"
-      tg_arn = aws_lb_target_group.auth.arn
-      db_host = aws_instance.postgres.private_ip
-    }
-    "user-profile-service" = {
-      port = 8002
-      image = "user-profile-service"
-      tg_arn = aws_lb_target_group.user.arn
-      db_host = aws_instance.postgres.private_ip
-    }
-    "workout-command-service" = {
-      port = 8003
-      image = "workout-command-service"
-      tg_arn = aws_lb_target_group.work_cmd.arn
-      db_host = aws_instance.mongo.private_ip
-    }
-    "workout-query-service" = {
-      port = 8004
-      image = "workout-query-service"
-      tg_arn = aws_lb_target_group.work_qry.arn
-      db_host = aws_instance.mongo.private_ip
-    }
-    "exercise-library-service" = {
-      port = 8005
-      image = "exercise-library-service"
-      tg_arn = aws_lb_target_group.exercise.arn
-      db_host = aws_instance.mongo.private_ip
-    }
-    "routine-service" = {
-      port = 8006
-      image = "routine-service"
-      tg_arn = aws_lb_target_group.routine.arn
-      db_host = aws_instance.postgres.private_ip
-    }
-    "analytics-service" = {
-      port = 8007
-      image = "analytics-service"
-      tg_arn = aws_lb_target_group.analytics.arn
-      db_host = aws_instance.postgres.private_ip
-    }
-    "notification-service" = {
-      port = 8008
-      image = "notification-service"
-      tg_arn = aws_lb_target_group.notify.arn
-      db_host = aws_instance.redis.private_ip
-    }
-    "video-service" = {
-      port = 8009
-      image = "video-service"
-      tg_arn = aws_lb_target_group.video.arn
-      db_host = aws_instance.mongo.private_ip
-    }
-    "sync-service" = {
-      port = 8010
-      image = "sync-service"
-      tg_arn = aws_lb_target_group.sync.arn
-      db_host = aws_instance.redis.private_ip
-    }
-  }
-}
-
-resource "aws_launch_template" "microservice_lt" {
-  for_each = local.services
-
-  name_prefix   = "${var.project_name}-${each.key}-lt-"
+# --- EC2 #4: FRONTEND ---
+resource "aws_launch_template" "frontend_lt" {
+  name_prefix   = "${var.project_name}-frontend-lt-"
   image_id      = data.aws_ami.amazon_linux_2023.id
-  instance_type = var.instance_type_app
+  instance_type = "t2.micro"
+  key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  key_name = var.key_name
 
   user_data = base64encode(<<-EOF
     #!/bin/bash
@@ -609,64 +472,110 @@ resource "aws_launch_template" "microservice_lt" {
     systemctl start docker
     systemctl enable docker
     usermod -a -G docker ec2-user
-
-    SERVICE_PORT="${each.value.port}"
-    IMAGE_NAME="stoicpath/${each.value.image}"
-    DB_HOST="${each.value.db_host}"
-    
-    docker rm -f $(docker ps -a -q) || true
-    docker pull $IMAGE_NAME:latest
-    docker run -d --restart always \
-      -p $SERVICE_PORT:$SERVICE_PORT \
-      -e DB_HOST=$DB_HOST \
-      -e DB_PORT=5432 \
-      -e REDIS_HOST=${aws_instance.redis.private_ip} \
-      -e REDIS_PORT=6379 \
-      -e DJANGO_SECRET_KEY='super-secret-key-prod' \
-      -e DEBUG='False' \
-      $IMAGE_NAME:latest
+    docker run -d --restart always -p 80:80 --name web stoicpath/web:latest
   EOF
   )
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name = "${var.project_name}-${each.key}"
-    }
-  }
 }
 
-resource "aws_autoscaling_group" "microservice_asg" {
-  for_each = local.services
-
-  name                = "${var.project_name}-${each.key}-asg"
-  desired_capacity    = 1
-  max_size            = 2
+resource "aws_autoscaling_group" "frontend_asg" {
+  name                = "${var.project_name}-frontend-asg"
   min_size            = 1
+  max_size            = 1
+  desired_capacity    = 1
   vpc_zone_identifier = [aws_subnet.private_1.id]
-
-  target_group_arns = [each.value.tg_arn]
-
-  wait_for_capacity_timeout = "0" # Disable timeout
-
+  target_group_arns   = [aws_lb_target_group.web.arn]
   launch_template {
-    id      = aws_launch_template.microservice_lt[each.key].id
+    id      = aws_launch_template.frontend_lt.id
     version = "$Latest"
   }
-
-  instance_refresh {
-    strategy = "Rolling"
-    preferences {
-      min_healthy_percentage = 50
-    }
-  }
-
   tag {
     key                 = "Name"
-    value               = "${var.project_name}-${each.key}"
+    value               = "${var.project_name}-frontend"
     propagate_at_launch = true
   }
 }
+
+# --- EC2 #5: GRUPO ACCESO (Auth, User, Sync) ---
+resource "aws_launch_template" "access_lt" {
+  name_prefix   = "${var.project_name}-access-lt-"
+  image_id      = data.aws_ami.amazon_linux_2023.id
+  instance_type = "t2.medium"
+  key_name      = var.key_name
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  user_data     = filebase64("${path.module}/../../scripts/setup_backend_access.sh")
+}
+
+resource "aws_autoscaling_group" "access_asg" {
+  name                = "${var.project_name}-access-asg"
+  min_size            = 1
+  max_size            = 1
+  vpc_zone_identifier = [aws_subnet.private_1.id]
+  target_group_arns   = [for tg in aws_lb_target_group.access_tgs : tg.arn]
+  launch_template {
+    id      = aws_launch_template.access_lt.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "${var.project_name}-access-node"
+    propagate_at_launch = true
+  }
+}
+
+# --- EC2 #6: GRUPO CORE (Cmd, Qry, Routine, Lib) ---
+resource "aws_launch_template" "core_lt" {
+  name_prefix   = "${var.project_name}-core-lt-"
+  image_id      = data.aws_ami.amazon_linux_2023.id
+  instance_type = "t2.medium"
+  key_name      = var.key_name
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  user_data     = filebase64("${path.module}/../../scripts/setup_backend_core.sh")
+}
+
+resource "aws_autoscaling_group" "core_asg" {
+  name                = "${var.project_name}-core-asg"
+  min_size            = 1
+  max_size            = 1
+  vpc_zone_identifier = [aws_subnet.private_1.id]
+  target_group_arns   = [for tg in aws_lb_target_group.core_tgs : tg.arn]
+  launch_template {
+    id      = aws_launch_template.core_lt.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "${var.project_name}-core-node"
+    propagate_at_launch = true
+  }
+}
+
+# --- EC2 #7: GRUPO HEAVY (Video, Notif, Analytics) ---
+resource "aws_launch_template" "heavy_lt" {
+  name_prefix   = "${var.project_name}-heavy-lt-"
+  image_id      = data.aws_ami.amazon_linux_2023.id
+  instance_type = "t2.medium"
+  key_name      = var.key_name
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  user_data     = filebase64("${path.module}/../../scripts/setup_backend_heavy.sh")
+}
+
+resource "aws_autoscaling_group" "heavy_asg" {
+  name                = "${var.project_name}-heavy-asg"
+  min_size            = 1
+  max_size            = 1
+  vpc_zone_identifier = [aws_subnet.private_1.id]
+  target_group_arns   = [for tg in aws_lb_target_group.heavy_tgs : tg.arn]
+  launch_template {
+    id      = aws_launch_template.heavy_lt.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "${var.project_name}-heavy-node"
+    propagate_at_launch = true
+  }
+}
+
 
 # --- OUTPUTS ---
 

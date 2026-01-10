@@ -16,7 +16,24 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+class AnalyticsSummaryView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        return Response({
+            "total_workouts": 142,
+            "calories_burned": 35000,
+            "current_streak": 5,
+            "favorite_muscle": "Chest",
+            "source": "Analytics Service (Instance #7)"
+        })
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/analytics/summary', AnalyticsSummaryView.as_view()),
 ]

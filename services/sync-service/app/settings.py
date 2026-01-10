@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 
@@ -6,6 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+# Importante para el Balanceador de Carga
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -48,14 +51,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# --- Database Configuration (SQLite Internal) ---
-# Sync service logic relies on Redis. We use SQLite for internal Django needs
-# to avoid dependency on Postgres for temporary sync states.
+# --- 1. Database Configuration (PostgreSQL) ---
+# Usada para persistencia de logs, historial de notificaciones, usuarios, etc.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=False
+    )
 }
 
 # --- Redis Configuration (The Real DB for Sync) ---
@@ -70,9 +73,16 @@ CACHES = {
         "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Timeout de conexión para no bloquear si Redis cae
+            "SOCKET_CONNECT_TIMEOUT": 5,  
+            "SOCKET_TIMEOUT": 5,
         }
     }
 }
+
+# Configuración de Sesiones usando Redis (Opcional, pero recomendado para stateless)
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },

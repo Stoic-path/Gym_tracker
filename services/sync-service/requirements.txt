@@ -2,8 +2,14 @@
 djangorestframework>=3.14.0
 djangorestframework-simplejwt>=5.3.0
 python-dotenv>=1.0.0
-# Redis Support
+
+# Database (Postgres para persistencia)
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+
+# Cache & Queues (Redis - CRÍTICO AQUÍ)
 django-redis>=5.4.0
 redis>=5.0.0
+
 # Server
 gunicorn>=21.2.0

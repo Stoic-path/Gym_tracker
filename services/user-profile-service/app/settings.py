@@ -36,8 +36,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
+    'rest_framework_simplejwt',
+    'profiles',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -68,23 +75,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# --- Database Configuration (PostgreSQL) ---
-# Terraform injects the Postgres EC2 Private IP into DB_HOST
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = 'user_profile_db' # Must match the DB created in setup_postgres.sh
-DB_USER = 'gym_user'
-DB_PASSWORD = 'gym_password_123'
+# --- Database Configuration ---
+# Usamos dj_database_url para parsear la conexión automáticamente.
+# Terraform nos pasará la variable DATABASE_URL con el formato:
+# postgres://usuario:password@IP_EC2:5432/nombre_db
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': DB_PASSWORD,
-        'HOST': DB_HOST,
-        'PORT': DB_PORT,
-    }
+    'default': dj_database_url.config(
+        # Si no hay variable de entorno (ej. local sin docker), usa SQLite por defecto
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=False  # Importante: En red interna de AWS Academy no usamos SSL para la DB
+    )
 }
 
 # --- Redis Configuration ---

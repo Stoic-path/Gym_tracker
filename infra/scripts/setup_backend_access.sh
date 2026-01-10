@@ -1,0 +1,34 @@
+#!/bin/bash
+yum update -y
+yum install -y docker
+systemctl start docker
+systemctl enable docker
+usermod -a -G docker ec2-user
+
+# Variables de entorno comunes (se inyectarán via Terraform si es necesario, 
+# pero aquí hardcodeamos lo básico para el ejemplo o usamos las de instancia)
+# Nota: En un entorno real, pasamos esto via UserData dinámico.
+
+# --- ACCESO Y SINCRONIZACIÓN (EC2 #5) ---
+
+# 1. Auth Service (8001)
+docker run -d --restart always \
+  -p 8001:8001 \
+  --name auth-service \
+  -e DB_PORT=5432 \
+  -e REDIS_PORT=6379 \
+  stoicpath/auth-service:latest
+
+# 2. User Profile Service (8002)
+docker run -d --restart always \
+  -p 8002:8002 \
+  --name user-profile-service \
+  -e DB_PORT=5432 \
+  stoicpath/user-profile-service:latest
+
+# 3. Sync Service (8009)
+docker run -d --restart always \
+  -p 8009:8009 \
+  --name sync-service \
+  -e REDIS_PORT=6379 \
+  stoicpath/sync-service:latest

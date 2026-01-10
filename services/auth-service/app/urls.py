@@ -9,8 +9,10 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # JWT Auth Endpoints
-    # POST /api/token/ -> Login (Send email/password, receive tokens)
+    # Standard Auth Routes
+    path('api/auth/login', TokenObtainPairView.as_view(), name='auth_login'), # Frontend expects this
+    
+    # JWT Auth Endpoints (Original)
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     
     # POST /api/token/refresh/ -> Refresh access token using refresh token

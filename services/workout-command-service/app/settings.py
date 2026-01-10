@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from pymongo import MongoClient
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,38 +55,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# --- Database Configuration (MongoDB via Djongo) ---
-# Terraform injects the Mongo EC2 Private IP into DB_HOST
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '27017')
-DB_NAME = 'workout_command_db' # Must match setup_mongo.sh
+# --- Database Configuration (MongoDB Native) ---
 
-# --- Database Configuration ---
-# We use PyMongo directly. Django ORM is not used for business data here.
-# This prevents 'djongo' dependency conflicts.
+# 1. Anulamos el ORM SQL de Django
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.dummy',
     }
 }
 
-# Configuración Manual de Mongo (Para usar en tu código con db = client[DB_NAME])
-import sys
-if 'test' not in sys.argv:
-    from pymongo import MongoClient
-    MONGO_HOST = os.environ.get('DB_HOST', 'localhost')
-    MONGO_PORT = int(os.environ.get('DB_PORT', 27017))
-    MONGO_DB_NAME = 'workout_command_db'
-    
-    # Cliente Global accesible desde views.py
-    mongo_client = MongoClient(
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        username='gym_user',
-        password='gym_password_123',
-        authSource='admin'
+# 2. Variables de Entorno (Inyectadas por Terraform/Docker)
+MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
+MONGO_PORT = int(os.environ.get('MONGO_PORT', 27017))
+MONGO_USER = os.environ.get('MONGO_USER', 'gym_user')
+MONGO_PASS = os.environ.get('MONGO_PASS', 'gym_password_123')
+MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'workout_command_db') # Nombre específico de este servicio
+MONGO_AUTH_SOURCE = os.environ.get('MONGO_AUTH_SOURCE', 'admin')
+
+# 3. Cliente Global (Singleton)
+try:
+    # Construir URI de conexión
+    if MONGO_USER and MONGO_PASS:
+        mongo_uri = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/?authSource={MONGO_AUTH_SOURCE}"
+    else:
+        mongo_uri = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+
+    # Crear cliente
+    client = MongoClient(
+        mongo_uri,
+        serverSelectionTimeoutMS=5000, 
+        connectTimeoutMS=5000
     )
-    mongo_db = mongo_client[MONGO_DB_NAME]
+    
+    # Objeto de Base de Datos Global
+    mongo_db = client[MONGO_DB_NAME]
+    
+    print(f"✅ [MongoDB] Conectado a: {MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}")
+
+except Exception as e:
+    print(f"❌ [MongoDB] Error de conexión: {e}")
+    mongo_db = None
 
 # --- Redis Configuration ---
 # Used for task queues (sending events to Query service)

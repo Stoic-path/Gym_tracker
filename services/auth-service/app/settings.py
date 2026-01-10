@@ -23,12 +23,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Permitimos todo porque estamos detrás de una VPC privada y un Load Balancer.
+# En producción real se pondría el dominio específico, pero en Academy esto evita errores.
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -75,23 +77,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'app.wsgi.application'
 
 # --- Database Configuration ---
-# Retrieve DB connection details from environment variables injected by Terraform.
-# Defaults to 'localhost' for local development using Docker Compose.
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = 'auth_db'  # NOTE: Ensure this matches the specific service DB name
-DB_USER = 'gym_user'
-DB_PASSWORD = 'gym_password_123'
+# Usamos dj_database_url para parsear la conexión automáticamente.
+# Terraform nos pasará la variable DATABASE_URL con el formato:
+# postgres://usuario:password@IP_EC2:5432/nombre_db
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': DB_PASSWORD,
-        'HOST': DB_HOST,
-        'PORT': DB_PORT,
-    }
+    'default': dj_database_url.config(
+        # Si no hay variable de entorno (ej. local sin docker), usa SQLite por defecto
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=False  # Importante: En red interna de AWS Academy no usamos SSL para la DB
+    )
 }
 
 # --- Redis Configuration (Cache/Queue) ---
