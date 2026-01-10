@@ -1,48 +1,161 @@
-# .github/workflows/ci.yml
-name: CI (Lint & Test)
+name: GymTrack CI/CD Pipeline
 
-# Runs on pushes to key branches as per Section 7.2
 on:
   push:
     branches:
-      - 'feature/*'
-      - 'develop'
-      - 'main'
-  pull_request:      # Also on PRs to see green check before accepting
+      - main        # Producción
+      - develop     # Desarrollo 
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  AWS_REGION: us-east-1
+  # IMPORTANTE: Este nombre debe coincidir con el prefijo que usaste en Terraform.
+  # En tu main.tf usaste variable "project_name" = "gym-tracker"
+  PROJECT_NAME: gym-tracker 
 
 jobs:
-  ci:
-    name: CI Pipeline
+  # ------------------------------------------------------------------
+  # JOB 1: QUALITY ASSURANCE (Lint & Test)
+  # ------------------------------------------------------------------
+  quality-checks:
+    name: Quality Assurance (Moon)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 1. Install PNPM (Required for Moon to find the command)
       - uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      # 2. Install Node.js (Required by PNPM)
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
 
-      # 3. Install Moonrepo
       - uses: moonrepo/setup-moon-action@v1
+      
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
 
-      # 4. Install Toolchain
-      - name: Install Toolchain
-        run: moon setup
-
-      # 5. Code Validation (Lint) - Strict
       - name: Run Lint
         run: moon run :lint
-        # continue-on-error: true  <-- Keep commented
 
-      # 6. Unit Tests - Strict
       - name: Run Tests
         run: moon run :test
-        # continue-on-error: true  <-- Keep commented
+
+  # ------------------------------------------------------------------
+  # JOB 2: BUILD AND PUSH DOCKER IMAGES
+  # ------------------------------------------------------------------
+  build-and-push:
+    needs: quality-checks
+    # Ejecutar en main O develop
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: web
+            path: apps/web
+          - name: auth-service
+            path: services/auth-service
+          - name: user-profile-service
+            path: services/user-profile-service
+          - name: routine-service
+            path: services/routine-service
+          - name: analytics-service
+            path: services/analytics-service
+          - name: notification-service
+            path: services/notification-service
+          - name: workout-command-service
+            path: services/workout-command-service
+          - name: workout-query-service
+            path: services/workout-query-service
+          - name: exercise-library-service
+            path: services/exercise-library-service
+          - name: video-service
+            path: services/video-service
+          - name: sync-service
+            path: services/sync-service
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.path }} 
+          file: ${{ matrix.path }}/Dockerfile
+          push: true
+          # Etiquetado dinámico:
+          # develop -> :dev
+          # main    -> :latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:buildcache,mode=max
+
+  # ------------------------------------------------------------------
+  # JOB 3: DEPLOY TO AWS (Instance Refresh)
+  # ------------------------------------------------------------------
+  deploy-aws:
+    needs: build-and-push
+    # Ejecutar en main O develop
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Trigger Instance Refresh (Rolling Deployment)
+        run: |
+          services=(
+            "web"
+            "auth-service"
+            "user-profile-service"
+            "routine-service"
+            "analytics-service"
+            "notification-service"
+            "workout-command-service"
+            "workout-query-service"
+            "exercise-library-service"
+            "video-service"
+            "sync-service"
+          )
+
+          for service in "${services[@]}"; do
+            # LÓGICA DE NOMBRES ASG
+            # Aquí es donde ocurre la magia para separar entornos.
+            # Terraform creó los ASG como: "gym-tracker-{service}-asg"
+            # Si en el futuro creas otro entorno, deberás ajustar esto o usar variables.
+            
+            # Por ahora, como solo tienes UNA infraestructura desplegada (la de develop),
+            # apuntaremos siempre al nombre base.
+            ASG_NAME="${PROJECT_NAME}-${service}-asg"
+            
+            echo "🚀 Updating ASG: $ASG_NAME..."
+            
+            aws autoscaling start-instance-refresh \
+              --auto-scaling-group-name "$ASG_NAME" \
+              --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 60}' \
+              || echo "⚠️ Could not start refresh for $ASG_NAME"
+          done
