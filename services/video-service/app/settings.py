@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from pymongo import MongoClient
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -48,37 +49,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# --- Database Configuration (MongoDB) ---
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '27017')
-DB_NAME = 'video_db' # Matches setup_mongo.sh
-
-# --- Database Configuration ---
-# We use PyMongo directly. Django ORM is not used for business data here.
-# This prevents 'djongo' dependency conflicts.
+# --- Database Configuration (MongoDB Native) ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.dummy',
     }
 }
 
-# Configuración Manual de Mongo (Para usar en tu código con db = client[DB_NAME])
-import sys
-if 'test' not in sys.argv:
-    from pymongo import MongoClient
-    MONGO_HOST = os.environ.get('DB_HOST', 'localhost')
-    MONGO_PORT = int(os.environ.get('DB_PORT', 27017))
-    MONGO_DB_NAME = 'workout_command_db'
-    
-    # Cliente Global accesible desde views.py
-    mongo_client = MongoClient(
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        username='gym_user',
-        password='gym_password_123',
-        authSource='admin'
-    )
-    mongo_db = mongo_client[MONGO_DB_NAME]
+MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
+MONGO_PORT = int(os.environ.get('MONGO_PORT', 27017))
+MONGO_USER = os.environ.get('MONGO_USER', 'gym_user')
+MONGO_PASS = os.environ.get('MONGO_PASS', 'gym_password_123')
+MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'video_service_db') # DB PROPIA
+MONGO_AUTH_SOURCE = os.environ.get('MONGO_AUTH_SOURCE', 'admin')
+
+try:
+    if MONGO_USER and MONGO_PASS:
+        mongo_uri = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/?authSource={MONGO_AUTH_SOURCE}"
+    else:
+        mongo_uri = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+
+    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
+    mongo_db = client[MONGO_DB_NAME]
+    print(f"✅ [MongoDB] Conectado a: {MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}")
+except Exception as e:
+    print(f"❌ [MongoDB] Error de conexión: {e}")
+    mongo_db = None
 
 # --- Redis Configuration ---
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
