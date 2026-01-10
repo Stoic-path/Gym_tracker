@@ -60,20 +60,32 @@ DB_HOST = os.environ.get('DB_HOST', 'localhost')
 DB_PORT = os.environ.get('DB_PORT', '27017')
 DB_NAME = 'workout_command_db' # Must match setup_mongo.sh
 
+# --- Database Configuration ---
+# We use PyMongo directly. Django ORM is not used for business data here.
+# This prevents 'djongo' dependency conflicts.
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'NAME': DB_NAME,
-        'CLIENT': {
-            'host': DB_HOST,
-            'port': int(DB_PORT),
-            'username': 'gym_user',
-            'password': 'gym_password_123',
-            'authSource': 'admin',
-            'authMechanism': 'SCRAM-SHA-1',
-        }
+        'ENGINE': 'django.db.backends.dummy',
     }
 }
+
+# Configuración Manual de Mongo (Para usar en tu código con db = client[DB_NAME])
+import sys
+if 'test' not in sys.argv:
+    from pymongo import MongoClient
+    MONGO_HOST = os.environ.get('DB_HOST', 'localhost')
+    MONGO_PORT = int(os.environ.get('DB_PORT', 27017))
+    MONGO_DB_NAME = 'workout_command_db'
+    
+    # Cliente Global accesible desde views.py
+    mongo_client = MongoClient(
+        host=MONGO_HOST,
+        port=MONGO_PORT,
+        username='gym_user',
+        password='gym_password_123',
+        authSource='admin'
+    )
+    mongo_db = mongo_client[MONGO_DB_NAME]
 
 # --- Redis Configuration ---
 # Used for task queues (sending events to Query service)
