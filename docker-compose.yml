@@ -66,6 +66,7 @@ services:
       - postgres
       - redis
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
       - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
       - REDIS_URL=redis://redis:6379/1  # Using database 1 for Auth
       - REDIS_HOST=redis
@@ -76,7 +77,10 @@ services:
       - "8002:8002"
     depends_on:
       - postgres
+    volumes:
+      - ./services/user-profile-service:/app
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
       - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
       - REDIS_HOST=redis
 
@@ -97,7 +101,10 @@ services:
       - "8004:8004"
     depends_on:
       - mongo
+    volumes:
+      - ./services/workout-query-service:/app
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
       - REDIS_HOST=redis
       - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
 
@@ -156,7 +163,10 @@ services:
     depends_on:
       - postgres
       - mongo
+    volumes:
+      - ./services/analytics-service:/app
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
       - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
 
 volumes:
