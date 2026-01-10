@@ -16,7 +16,7 @@ RUN pnpm install
 COPY . .
 
 # Build the application (generates /dist folder)
-RUN pnpm build
+RUN pnpm run build
 
 # --- Stage 2: Production Server (Nginx) ---
 FROM nginx:alpine
@@ -24,16 +24,9 @@ FROM nginx:alpine
 # Copy built files from the previous stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Basic configuration for SPA (Single Page Application)
-# This prevents 404 errors when reloading internal pages
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 
 EXPOSE 80
 
