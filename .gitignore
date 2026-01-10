@@ -14,5 +14,12 @@ venv/
 .venv/
 .env
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+
 # OS
 .DS_Store
