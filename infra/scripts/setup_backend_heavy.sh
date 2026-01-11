@@ -9,32 +9,33 @@ usermod -a -G docker ec2-user
 DB_POSTGRES_HOST="${postgres_ip}"
 DB_MONGO_HOST="${mongo_ip}"
 DB_REDIS_HOST="${redis_ip}"
+TAG="${image_tag}"
 
 # --- PROCESAMIENTO PESADO (EC2 #7) ---
 # Video, Notification, Analytics
 
 # 1. Video Service (8007)
-docker pull stoicpath/video-service:latest
+docker pull stoicpath/video-service:$TAG
 docker run -d --restart always \
   -p 8007:8007 \
   --name video-service \
   -e MONGO_HOST=$DB_MONGO_HOST \
   -e MONGO_PORT=27017 \
-  stoicpath/video-service:latest
+  stoicpath/video-service:$TAG
 
 # 2. Notification Service (8008)
-docker pull stoicpath/notification-service:latest
+docker pull stoicpath/notification-service:$TAG
 docker run -d --restart always \
   -p 8008:8008 \
   --name notification-service \
   -e REDIS_HOST=$DB_REDIS_HOST \
   -e REDIS_PORT=6379 \
-  stoicpath/notification-service:latest
+  stoicpath/notification-service:$TAG
 
 # 3. Analytics Service (8010)
-docker pull stoicpath/analytics-service:latest
+docker pull stoicpath/analytics-service:$TAG
 docker run -d --restart always \
   -p 8010:8010 \
   --name analytics-service \
   -e DATABASE_URL="postgres://gym_user:gym_password_123@$DB_POSTGRES_HOST:5432/analytics_db" \
-  stoicpath/analytics-service:latest
+  stoicpath/analytics-service:$TAG

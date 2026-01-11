@@ -473,8 +473,8 @@ resource "aws_launch_template" "frontend_lt" {
     systemctl enable docker
     usermod -a -G docker ec2-user
     # Forzamos la descarga de la ultima imagen para asegurar que el Instance Refresh use el codigo nuevo
-    docker pull stoicpath/web:latest
-    docker run -d --restart always -p 80:80 --name web stoicpath/web:latest
+    docker pull stoicpath/web:dev
+    docker run -d --restart always -p 80:80 --name web stoicpath/web:dev
   EOF
   )
 }
@@ -507,6 +507,7 @@ resource "aws_launch_template" "access_lt" {
   user_data = base64encode(templatefile("${path.module}/../../../scripts/setup_backend_access.sh", {
     postgres_ip = aws_instance.postgres.private_ip
     redis_ip    = aws_instance.redis.private_ip
+    image_tag   = "dev"
   }))
 }
 
@@ -537,6 +538,7 @@ resource "aws_launch_template" "core_lt" {
   user_data = base64encode(templatefile("${path.module}/../../../scripts/setup_backend_core.sh", {
     postgres_ip = aws_instance.postgres.private_ip
     mongo_ip    = aws_instance.mongo.private_ip
+    image_tag   = "dev"
   }))
 }
 
@@ -568,6 +570,7 @@ resource "aws_launch_template" "heavy_lt" {
     postgres_ip = aws_instance.postgres.private_ip
     mongo_ip    = aws_instance.mongo.private_ip
     redis_ip    = aws_instance.redis.private_ip
+    image_tag   = "dev"
   }))
 }
 
