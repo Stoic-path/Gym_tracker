@@ -34,7 +34,7 @@ foreach ($Service in $BackendServices) {
         docker push $ImageName
     } else {
         Write-Host "ERROR: Falló el build de $Service" -ForegroundColor Red
-        break
+        exit 1
     }
 }
 
