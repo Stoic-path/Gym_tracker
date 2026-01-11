@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -128,4 +128,3 @@ function App() {
 }
 
 export default App
-
