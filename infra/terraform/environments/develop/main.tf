@@ -347,7 +347,7 @@ resource "aws_lb_listener_rule" "work_cmd_rule" {
   priority     = 30
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.core_tgs["work_cmd"].arn
+    target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn
   }
   condition {
     path_pattern {
@@ -361,7 +361,7 @@ resource "aws_lb_listener_rule" "work_qry_rule" {
   priority     = 40
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.core_tgs["work_qry"].arn
+    target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn
   }
   condition {
     path_pattern {
@@ -502,7 +502,7 @@ resource "aws_launch_template" "access_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../scripts/setup_backend_access.sh")
+  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_access.sh")
 }
 
 resource "aws_autoscaling_group" "access_asg" {
@@ -529,7 +529,7 @@ resource "aws_launch_template" "core_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../scripts/setup_backend_core.sh")
+  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_core.sh")
 }
 
 resource "aws_autoscaling_group" "core_asg" {
@@ -556,7 +556,7 @@ resource "aws_launch_template" "heavy_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../scripts/setup_backend_heavy.sh")
+  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_heavy.sh")
 }
 
 resource "aws_autoscaling_group" "heavy_asg" {

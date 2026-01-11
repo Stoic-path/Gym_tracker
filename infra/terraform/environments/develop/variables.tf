@@ -42,8 +42,8 @@ variable "tg_access_group" {
 variable "tg_core_group" {
   description = "Target groups configuration for Core Business Cluster"
   default = {
-    "work_cmd" = { port = 8003, path = "/api/workouts/command" }
-    "work_qry" = { port = 8004, path = "/api/workouts/query" }
+    "work-cmd" = { port = 8003, path = "/api/workouts/command" }
+    "work-qry" = { port = 8004, path = "/api/workouts/query" }
     "routine"  = { port = 8005, path = "/api/routines" }
     "exercise" = { port = 8006, path = "/api/exercises" }
   }
