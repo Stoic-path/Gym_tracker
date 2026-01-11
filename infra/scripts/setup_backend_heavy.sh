@@ -14,6 +14,7 @@ DB_REDIS_HOST="${redis_ip}"
 # Video, Notification, Analytics
 
 # 1. Video Service (8007)
+docker pull stoicpath/video-service:latest
 docker run -d --restart always \
   -p 8007:8007 \
   --name video-service \
@@ -22,6 +23,7 @@ docker run -d --restart always \
   stoicpath/video-service:latest
 
 # 2. Notification Service (8008)
+docker pull stoicpath/notification-service:latest
 docker run -d --restart always \
   -p 8008:8008 \
   --name notification-service \
@@ -30,6 +32,7 @@ docker run -d --restart always \
   stoicpath/notification-service:latest
 
 # 3. Analytics Service (8010)
+docker pull stoicpath/analytics-service:latest
 docker run -d --restart always \
   -p 8010:8010 \
   --name analytics-service \

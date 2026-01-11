@@ -472,6 +472,8 @@ resource "aws_launch_template" "frontend_lt" {
     systemctl start docker
     systemctl enable docker
     usermod -a -G docker ec2-user
+    # Forzamos la descarga de la ultima imagen para asegurar que el Instance Refresh use el codigo nuevo
+    docker pull stoicpath/web:latest
     docker run -d --restart always -p 80:80 --name web stoicpath/web:latest
   EOF
   )

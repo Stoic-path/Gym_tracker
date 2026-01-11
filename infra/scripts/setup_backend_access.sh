@@ -12,6 +12,7 @@ DB_REDIS_HOST="${redis_ip}"
 # --- ACCESO Y SINCRONIZACIÓN (EC2 #5) ---
 
 # 1. Auth Service (8001)
+docker pull stoicpath/auth-service:latest
 docker run -d --restart always \
   -p 8001:8001 \
   --name auth-service \
@@ -22,6 +23,7 @@ docker run -d --restart always \
   stoicpath/auth-service:latest
 
 # 2. User Profile Service (8002)
+docker pull stoicpath/user-profile-service:latest
 docker run -d --restart always \
   -p 8002:8002 \
   --name user-profile-service \
@@ -30,6 +32,7 @@ docker run -d --restart always \
   stoicpath/user-profile-service:latest
 
 # 3. Sync Service (8009)
+docker pull stoicpath/sync-service:latest
 docker run -d --restart always \
   -p 8009:8009 \
   --name sync-service \

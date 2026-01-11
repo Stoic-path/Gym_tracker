@@ -34,7 +34,7 @@ jobs:
       # Output JSON for the matrix in build job
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       # Output list of services for deploy script
-      services_to_deploy: ${{ steps.filter.outputs.changes }}
+      services_to_deploy: ${{ steps.set-matrix.outputs.final_services }}
       # Boolean to check if we should run build/deploy
       should_run: ${{ steps.filter.outputs.changes != '[]' }}
     steps:
@@ -73,6 +73,9 @@ jobs:
           fi
 
           echo "Detected changes in: $CHANGED_SERVICES"
+          
+          # Output the final list of services for the deploy job
+          echo "final_services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
 
           # Python script to transform the simple list ["web", "auth"] into the matrix format [{"name":"web","path":"apps/web"}, ...]
           # This is necessary because the build job needs both name and path.
@@ -209,9 +212,38 @@ jobs:
           
           echo "🚀 Deploying services: $CLEAN_LIST"
 
+          # Map services to their corresponding consolidated ASG suffix
+          declare -A ASG_MAP
+          ASG_MAP["web"]="frontend"
+          ASG_MAP["auth-service"]="access"
+          ASG_MAP["user-profile-service"]="access"
+          ASG_MAP["sync-service"]="access"
+          ASG_MAP["workout-command-service"]="core"
+          ASG_MAP["workout-query-service"]="core"
+          ASG_MAP["routine-service"]="core"
+          ASG_MAP["exercise-library-service"]="core"
+          ASG_MAP["analytics-service"]="heavy"
+          ASG_MAP["notification-service"]="heavy"
+          ASG_MAP["video-service"]="heavy"
+
+          # Identify unique ASGs to update
+          TARGET_ASGS=""
           for service in $CLEAN_LIST; do
-            ASG_NAME="${PROJECT_NAME}-${service}-asg"
-            
+            SUFFIX="${ASG_MAP[$service]}"
+            if [ -n "$SUFFIX" ]; then
+              ASG_NAME="${PROJECT_NAME}-${SUFFIX}-asg"
+              if [[ "$TARGET_ASGS" != *"$ASG_NAME"* ]]; then
+                TARGET_ASGS="$TARGET_ASGS $ASG_NAME"
+              fi
+            fi
+          done
+
+          # Trim leading space
+          TARGET_ASGS=$(echo $TARGET_ASGS | xargs)
+          
+          echo "🚀 Consolidated ASGs to refresh: $TARGET_ASGS"
+
+          for ASG_NAME in $TARGET_ASGS; do
             echo "🚀 Updating ASG: $ASG_NAME..."
             
             # JUSTIFICATION FOR SETTINGS:

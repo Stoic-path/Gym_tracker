@@ -13,6 +13,7 @@ DB_MONGO_HOST="${mongo_ip}"
 # Workout Command/Query, Routine, Exercise Library
 
 # 1. Workout Command (8003)
+docker pull stoicpath/workout-command-service:latest
 docker run -d --restart always \
   -p 8003:8003 \
   --name workout-command-service \
@@ -21,6 +22,7 @@ docker run -d --restart always \
   stoicpath/workout-command-service:latest
 
 # 2. Workout Query (8004)
+docker pull stoicpath/workout-query-service:latest
 docker run -d --restart always \
   -p 8004:8004 \
   --name workout-query-service \
@@ -29,6 +31,7 @@ docker run -d --restart always \
   stoicpath/workout-query-service:latest
 
 # 3. Routine Service (8005)
+docker pull stoicpath/routine-service:latest
 docker run -d --restart always \
   -p 8005:8005 \
   --name routine-service \
@@ -37,6 +40,7 @@ docker run -d --restart always \
   stoicpath/routine-service:latest
 
 # 4. Exercise Library Service (8006)
+docker pull stoicpath/exercise-library-service:latest
 docker run -d --restart always \
   -p 8006:8006 \
   --name exercise-library-service \
