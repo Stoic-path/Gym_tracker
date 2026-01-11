@@ -5,6 +5,10 @@ systemctl start docker
 systemctl enable docker
 usermod -a -G docker ec2-user
 
+# Variables de entorno
+DB_POSTGRES_HOST="${postgres_ip}"
+DB_MONGO_HOST="${mongo_ip}"
+
 # --- CORE DE NEGOCIO (EC2 #6) ---
 # Workout Command/Query, Routine, Exercise Library
 
@@ -12,6 +16,7 @@ usermod -a -G docker ec2-user
 docker run -d --restart always \
   -p 8003:8003 \
   --name workout-command-service \
+  -e MONGO_HOST=$DB_MONGO_HOST \
   -e MONGO_PORT=27017 \
   stoicpath/workout-command-service:latest
 
@@ -19,6 +24,7 @@ docker run -d --restart always \
 docker run -d --restart always \
   -p 8004:8004 \
   --name workout-query-service \
+  -e MONGO_HOST=$DB_MONGO_HOST \
   -e MONGO_PORT=27017 \
   stoicpath/workout-query-service:latest
 
@@ -26,6 +32,7 @@ docker run -d --restart always \
 docker run -d --restart always \
   -p 8005:8005 \
   --name routine-service \
+  -e DB_HOST=$DB_POSTGRES_HOST \
   -e DB_PORT=5432 \
   stoicpath/routine-service:latest
 
@@ -33,5 +40,6 @@ docker run -d --restart always \
 docker run -d --restart always \
   -p 8006:8006 \
   --name exercise-library-service \
+  -e MONGO_HOST=$DB_MONGO_HOST \
   -e MONGO_PORT=27017 \
   stoicpath/exercise-library-service:latest

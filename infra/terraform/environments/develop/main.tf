@@ -502,7 +502,10 @@ resource "aws_launch_template" "access_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_access.sh")
+  user_data = base64encode(templatefile("${path.module}/../../../scripts/setup_backend_access.sh", {
+    postgres_ip = aws_instance.postgres.private_ip
+    redis_ip    = aws_instance.redis.private_ip
+  }))
 }
 
 resource "aws_autoscaling_group" "access_asg" {
@@ -529,7 +532,10 @@ resource "aws_launch_template" "core_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_core.sh")
+  user_data = base64encode(templatefile("${path.module}/../../../scripts/setup_backend_core.sh", {
+    postgres_ip = aws_instance.postgres.private_ip
+    mongo_ip    = aws_instance.mongo.private_ip
+  }))
 }
 
 resource "aws_autoscaling_group" "core_asg" {
@@ -556,7 +562,11 @@ resource "aws_launch_template" "heavy_lt" {
   instance_type = "t2.medium"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data     = filebase64("${path.module}/../../../scripts/setup_backend_heavy.sh")
+  user_data = base64encode(templatefile("${path.module}/../../../scripts/setup_backend_heavy.sh", {
+    postgres_ip = aws_instance.postgres.private_ip
+    mongo_ip    = aws_instance.mongo.private_ip
+    redis_ip    = aws_instance.redis.private_ip
+  }))
 }
 
 resource "aws_autoscaling_group" "heavy_asg" {
