@@ -35,8 +35,7 @@ docker pull stoicpath/routine-service:latest
 docker run -d --restart always \
   -p 8005:8005 \
   --name routine-service \
-  -e DB_HOST=$DB_POSTGRES_HOST \
-  -e DB_PORT=5432 \
+  -e DATABASE_URL="postgres://gym_user:gym_password_123@$DB_POSTGRES_HOST:5432/routine_db" \
   stoicpath/routine-service:latest
 
 # 4. Exercise Library Service (8006)

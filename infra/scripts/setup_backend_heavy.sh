@@ -36,6 +36,5 @@ docker pull stoicpath/analytics-service:latest
 docker run -d --restart always \
   -p 8010:8010 \
   --name analytics-service \
-  -e DB_HOST=$DB_POSTGRES_HOST \
-  -e DB_PORT=5432 \
+  -e DATABASE_URL="postgres://gym_user:gym_password_123@$DB_POSTGRES_HOST:5432/analytics_db" \
   stoicpath/analytics-service:latest
