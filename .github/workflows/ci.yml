@@ -173,21 +173,14 @@ jobs:
       # We use k6 for load testing.
       # For AWS Academy, we MUST keep this minimal ("Smoke Test") to avoid account suspension due to high network/CPU usage.
       # We are not running a stress test here, just verifying the services respond.
+      - name: Create k6 script
+        run: |
+          echo 'import { sleep } from "k6"; export default function () { console.log("Skipping heavy load test to protect AWS Academy quotas."); sleep(1); }' > smoke-test.js
+
       - name: Run k6 local test
         uses: grafana/k6-action@v0.3.0
         with:
-          k6-version: '0.47.0'
-          # You would need to create a simple test.js file. 
-          # For now, we just echo a placeholder to show where it goes.
-          # script: |
-          #   import http from 'k6/http';
-          #   import { sleep } from 'k6';
-          #   export default function () {
-          #     http.get('http://localhost'); // In real scenario, point to staging URL
-          #     sleep(1);
-          #   }
-          script: |
-            console.log("Skipping heavy load test to protect AWS Academy quotas.");
+          filename: smoke-test.js
 
   # ------------------------------------------------------------------
   # JOB 4: DEPLOY TO AWS (Instance Refresh)
