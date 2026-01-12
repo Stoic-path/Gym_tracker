@@ -59,7 +59,7 @@ services:
   auth-service:
     build: services/auth-service
     ports:
-      - "8001:8001"
+      - "8001:8000"
     volumes:
       - ./services/auth-service:/app  # <--- HOT RELOAD LINE
     depends_on:
@@ -74,7 +74,7 @@ services:
   user-profile-service:
     build: services/user-profile-service
     ports:
-      - "8002:8002"
+      - "8002:8000"
     depends_on:
       - postgres
     volumes:
@@ -87,7 +87,7 @@ services:
   workout-command-service:
     build: services/workout-command-service
     ports:
-      - "8003:8003"
+      - "8003:8000"
     depends_on:
       - mongo
     environment:
@@ -98,7 +98,7 @@ services:
   workout-query-service:
     build: services/workout-query-service
     ports:
-      - "8004:8004"
+      - "8004:8000"
     depends_on:
       - mongo
     volumes:
@@ -111,7 +111,7 @@ services:
   routine-service:
     build: services/routine-service
     ports:
-      - "8005:8005"
+      - "8005:8000"
     depends_on:
       - postgres
     environment:
@@ -121,7 +121,7 @@ services:
   exercise-library-service:
     build: services/exercise-library-service
     ports:
-      - "8006:8006"
+      - "8006:8000"
     depends_on:
       - mongo
     environment:
@@ -131,7 +131,7 @@ services:
   video-service:
     build: services/video-service
     ports:
-      - "8007:8007"
+      - "8007:8000"
     environment:
       - REDIS_HOST=redis
       - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
@@ -139,7 +139,7 @@ services:
   notification-service:
     build: services/notification-service
     ports:
-      - "8008:8008"
+      - "8008:8000"
     depends_on:
       - redis
     environment:
@@ -149,7 +149,7 @@ services:
   sync-service:
     build: services/sync-service
     ports:
-      - "8009:8009"
+      - "8009:8000"
     depends_on:
       - redis
     environment:
@@ -159,7 +159,7 @@ services:
   analytics-service:
     build: services/analytics-service
     ports:
-      - "8010:8010"
+      - "8010:8000"
     depends_on:
       - postgres
       - mongo

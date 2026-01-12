@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 8007
 
 # Default command on startup
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8007"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -49,12 +49,18 @@ jobs:
           # However, the logic below in 'set-matrix' handles the override better.
           filters: |
             web: 'apps/web/**'
-            auth-service: 'services/auth-service/**'
+            auth-service:
+              - 'services/auth-service/**'
+              - 'infra/scripts/setup_backend_access.sh'
             user-profile-service: 'services/user-profile-service/**'
             routine-service: 'services/routine-service/**'
-            analytics-service: 'services/analytics-service/**'
+            analytics-service:
+              - 'services/analytics-service/**'
+              - 'infra/scripts/setup_backend_heavy.sh'
             notification-service: 'services/notification-service/**'
-            workout-command-service: 'services/workout-command-service/**'
+            workout-command-service:
+              - 'services/workout-command-service/**'
+              - 'infra/scripts/setup_backend_core.sh'
             workout-query-service: 'services/workout-query-service/**'
             exercise-library-service: 'services/exercise-library-service/**'
             video-service: 'services/video-service/**'
