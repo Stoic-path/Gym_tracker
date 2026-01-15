@@ -1,6 +1,17 @@
 # Configuración
-$DockerUser = "stoicpath"
+$AWS_REGION = "us-east-1"
+$ProjectName = "gym-tracker"
 $Version = "latest"
+
+# Obtener Account ID y Login ECR
+Write-Host "Obteniendo credenciales de ECR..." -ForegroundColor Cyan
+$AccountId = aws sts get-caller-identity --query Account --output text
+if (-not $AccountId) { Write-Error "No se pudo obtener el AWS Account ID. Ejecuta switch_account.ps1 primero."; exit }
+
+$EcrUrl = "$AccountId.dkr.ecr.$AWS_REGION.amazonaws.com"
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $EcrUrl
+
+$RepoPrefix = "$EcrUrl/$ProjectName"
 
 # Lista de microservicios (Nombres de carpetas en /services)
 $BackendServices = @(
@@ -21,7 +32,7 @@ foreach ($Service in $BackendServices) {
     Write-Host "--------------------------------------------------" -ForegroundColor Cyan
     Write-Host "Procesando Backend: $Service" -ForegroundColor Yellow
     
-    $ImageName = "$DockerUser/$Service`:$Version"
+    $ImageName = "$RepoPrefix/$Service`:$Version"
     $Path = ".\services\$Service"
 
     # Build
@@ -30,7 +41,7 @@ foreach ($Service in $BackendServices) {
     
     if ($LASTEXITCODE -eq 0) {
         # Push
-        Write-Host "Subiendo imagen a DockerHub..."
+        Write-Host "Subiendo imagen a ECR..."
         docker push $ImageName
     } else {
         Write-Host "ERROR: Falló el build de $Service" -ForegroundColor Red
@@ -42,7 +53,7 @@ foreach ($Service in $BackendServices) {
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
 Write-Host "Procesando Frontend: Web" -ForegroundColor Yellow
 
-$WebImageName = "$DockerUser/web:$Version"
+$WebImageName = "$RepoPrefix/web:$Version"
 $WebPath = ".\apps\web"
 
 # Build Web
@@ -51,7 +62,7 @@ docker build -t $WebImageName $WebPath
 
 if ($LASTEXITCODE -eq 0) {
     # Push Web
-    Write-Host "Subiendo imagen a DockerHub..."
+    Write-Host "Subiendo imagen a ECR..."
     docker push $WebImageName
 } else {
     Write-Host "ERROR: Falló el build del Frontend" -ForegroundColor Red
