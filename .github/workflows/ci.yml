@@ -145,11 +145,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -163,9 +169,9 @@ jobs:
           # Etiquetado dinámico:
           # develop -> :dev
           # main    -> :latest
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:buildcache,mode=max
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
+          cache-from: type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:buildcache,mode=max
 
   # ------------------------------------------------------------------
   # JOB 3: LOAD TESTING (Smoke Test)
@@ -208,7 +214,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Trigger Instance Refresh (Rolling Deployment)
+      - name: Trigger ECS Service Update (Rolling Deployment)
         run: |
           # Get the list of changed services from the 'changes' job
           SERVICES_JSON='${{ needs.changes.outputs.services_to_deploy }}'
@@ -218,50 +224,37 @@ jobs:
           
           echo "🚀 Deploying services: $CLEAN_LIST"
 
-          # Map services to their corresponding consolidated ASG suffix
-          declare -A ASG_MAP
-          ASG_MAP["web"]="frontend"
-          ASG_MAP["auth-service"]="access"
-          ASG_MAP["user-profile-service"]="access"
-          ASG_MAP["sync-service"]="access"
-          ASG_MAP["workout-command-service"]="core"
-          ASG_MAP["workout-query-service"]="core"
-          ASG_MAP["routine-service"]="core"
-          ASG_MAP["exercise-library-service"]="core"
-          ASG_MAP["analytics-service"]="heavy"
-          ASG_MAP["notification-service"]="heavy"
-          ASG_MAP["video-service"]="heavy"
+          # Map services to their ECS Service Name
+          declare -A ECS_SERVICE_MAP
+          ECS_SERVICE_MAP["web"]="web-service"
+          ECS_SERVICE_MAP["auth-service"]="auth-service"
+          ECS_SERVICE_MAP["user-profile-service"]="user-service"
+          ECS_SERVICE_MAP["sync-service"]="sync-service"
+          ECS_SERVICE_MAP["workout-command-service"]="work-cmd-service"
+          ECS_SERVICE_MAP["workout-query-service"]="work-qry-service"
+          ECS_SERVICE_MAP["routine-service"]="routine-service"
+          ECS_SERVICE_MAP["exercise-library-service"]="exercise-service"
+          ECS_SERVICE_MAP["analytics-service"]="analytics-service"
+          ECS_SERVICE_MAP["notification-service"]="notify-service"
+          ECS_SERVICE_MAP["video-service"]="video-service"
 
-          # Identify unique ASGs to update
-          TARGET_ASGS=""
+          CLUSTER_NAME="${PROJECT_NAME}-cluster"
+
           for service in $CLEAN_LIST; do
-            SUFFIX="${ASG_MAP[$service]}"
-            if [ -n "$SUFFIX" ]; then
-              ASG_NAME="${PROJECT_NAME}-${SUFFIX}-asg"
-              if [[ "$TARGET_ASGS" != *"$ASG_NAME"* ]]; then
-                TARGET_ASGS="$TARGET_ASGS $ASG_NAME"
-              fi
+            SERVICE_NAME="${PROJECT_NAME}-${ECS_SERVICE_MAP[$service]}"
+            
+            if [ -z "${ECS_SERVICE_MAP[$service]}" ]; then
+               echo "⚠️ Service $service not mapped to ECS. Skipping."
+               continue
             fi
-          done
-
-          # Trim leading space
-          TARGET_ASGS=$(echo $TARGET_ASGS | xargs)
-          
-          echo "🚀 Consolidated ASGs to refresh: $TARGET_ASGS"
-
-          for ASG_NAME in $TARGET_ASGS; do
-            echo "🚀 Updating ASG: $ASG_NAME..."
             
-            # JUSTIFICATION FOR SETTINGS:
-            # MinHealthyPercentage: 0 -> Essential for AWS Academy. 
-            # It allows AWS to terminate the old instance BEFORE or WHILE starting the new one.
-            # If set to 50 or 100, it tries to spin up extra instances, which will likely hit the vCPU limit (32 vCPU) and fail.
-            # This causes a brief downtime during deployment, but ensures success in restricted environments.
+            echo "🚀 Updating ECS Service: $SERVICE_NAME in cluster $CLUSTER_NAME..."
             
-            aws autoscaling start-instance-refresh \
-              --auto-scaling-group-name "$ASG_NAME" \
-              --preferences '{"MinHealthyPercentage": 0, "InstanceWarmup": 60}' \
-              || echo "⚠️ Could not start refresh for $ASG_NAME"
+            aws ecs update-service \
+              --cluster "$CLUSTER_NAME" \
+              --service "$SERVICE_NAME" \
+              --force-new-deployment \
+              || echo "⚠️ Could not update service $SERVICE_NAME"
             
             # Sleep to avoid AWS API Rate Limiting when deploying many services
             sleep 5
