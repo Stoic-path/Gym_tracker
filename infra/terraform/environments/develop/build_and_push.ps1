@@ -1,7 +1,17 @@
 # Configuración
 $AWS_REGION = "us-east-1"
 $ProjectName = "gym-tracker"
-$Version = "latest"
+$Version = "dev"
+
+# Determinar la raiz del proyecto (4 niveles arriba: develop -> environments -> terraform -> infra -> root)
+$ProjectRoot = (Resolve-Path "$PSScriptRoot\..\..\..\..").Path
+
+# Verificar si Docker esta corriendo antes de continuar
+docker info > $null 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "ERROR CRITICO: Docker Desktop no esta ejecutandose o no esta listo. Por favor inicialo y reintenta."
+    exit 1
+}
 
 # Obtener Account ID y Login ECR
 Write-Host "Obteniendo credenciales de ECR..." -ForegroundColor Cyan
@@ -33,16 +43,19 @@ foreach ($Service in $BackendServices) {
     Write-Host "Procesando Backend: $Service" -ForegroundColor Yellow
     
     $ImageName = "$RepoPrefix/$Service`:$Version"
-    $Path = ".\services\$Service"
+    $ImageNameLatest = "$RepoPrefix/$Service`:latest"
+    $Path = "$ProjectRoot\services\$Service"
 
     # Build
     Write-Host "Construyendo imagen: $ImageName..."
-    docker build -t $ImageName $Path
+    # Etiquetamos como :dev Y como :latest
+    docker build -t $ImageName -t $ImageNameLatest $Path
     
     if ($LASTEXITCODE -eq 0) {
         # Push
         Write-Host "Subiendo imagen a ECR..."
         docker push $ImageName
+        docker push $ImageNameLatest
     } else {
         Write-Host "ERROR: Falló el build de $Service" -ForegroundColor Red
         exit 1
@@ -54,16 +67,18 @@ Write-Host "--------------------------------------------------" -ForegroundColor
 Write-Host "Procesando Frontend: Web" -ForegroundColor Yellow
 
 $WebImageName = "$RepoPrefix/web:$Version"
-$WebPath = ".\apps\web"
+$WebImageNameLatest = "$RepoPrefix/web:latest"
+$WebPath = "$ProjectRoot\apps\web"
 
 # Build Web
 Write-Host "Construyendo imagen: $WebImageName..."
-docker build -t $WebImageName $WebPath
+docker build -t $WebImageName -t $WebImageNameLatest $WebPath
 
 if ($LASTEXITCODE -eq 0) {
     # Push Web
     Write-Host "Subiendo imagen a ECR..."
     docker push $WebImageName
+    docker push $WebImageNameLatest
 } else {
     Write-Host "ERROR: Falló el build del Frontend" -ForegroundColor Red
 }
