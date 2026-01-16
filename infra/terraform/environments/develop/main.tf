@@ -330,7 +330,7 @@ resource "aws_lb_target_group" "web" {
   target_type = "ip" # Requerido para Fargate
   
   health_check {
-    path    = "/"
+    path    = "/health"
     matcher = "200"
   }
 }
@@ -517,51 +517,6 @@ resource "aws_lb_listener_rule" "sync_rule" {
   }
 }
 
-# --- 3.5 IAM ROLES & PROFILES (CRÍTICO PARA ECR/ECS) ---
-
-# 1. Rol para Instancias EC2 (Permite descargar de ECR y Logs)
-resource "aws_iam_role" "ec2_role" {
-  name = "${var.project_name}-ec2-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_ecr_read" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "${var.project_name}-ec2-profile"
-  role = aws_iam_role.ec2_role.name
-}
-
-# 2. Rol de Ejecución para ECS Fargate (Permite a ECS bajar imágenes y crear logs)
-resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project_name}-ecs-execution-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_execution_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
 # --- 3.6 ECR REPOSITORIES (PRIVATE) ---
 # Aquí se subirán tus imágenes Docker en lugar de Docker Hub
 resource "aws_ecr_repository" "repos" {
@@ -605,11 +560,11 @@ resource "aws_ecs_task_definition" "web" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
     name      = "web"
-    image     = "${aws_ecr_repository.repos["web"].repository_url}:latest"
+    image     = "${aws_ecr_repository.repos["web"].repository_url}:dev"
     essential = true
     portMappings = [{ containerPort = 80, hostPort = 80 }]
     logConfiguration = {
@@ -629,6 +584,7 @@ resource "aws_ecs_service" "web" {
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets          = [aws_subnet.private_1.id]
@@ -653,11 +609,11 @@ resource "aws_ecs_task_definition" "auth" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
     name      = "auth"
-    image     = "${aws_ecr_repository.repos["auth-service"].repository_url}:latest"
+    image     = "${aws_ecr_repository.repos["auth-service"].repository_url}:dev"
     essential = true
     command   = ["sh", "-c", "python manage.py migrate && python init_user.py && python manage.py runserver 0.0.0.0:8001"]
     portMappings = [{ containerPort = 8001 }]
@@ -677,8 +633,15 @@ resource "aws_ecs_service" "auth" {
   launch_type     = "FARGATE"
   health_check_grace_period_seconds = 60
 
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["auth"].arn; container_name = "auth"; container_port = 8001 }
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["auth"].arn
+    container_name   = "auth"
+    container_port   = 8001
+  }
 }
 
 # --- User Profile Service ---
@@ -688,11 +651,11 @@ resource "aws_ecs_task_definition" "user" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
     name      = "user"
-    image     = "${aws_ecr_repository.repos["user-profile-service"].repository_url}:latest"
+    image     = "${aws_ecr_repository.repos["user-profile-service"].repository_url}:dev"
     essential = true
     command   = ["sh", "-c", "python manage.py migrate && python manage.py seed_profiles && python manage.py runserver 0.0.0.0:8002"]
     portMappings = [{ containerPort = 8002 }]
@@ -709,8 +672,15 @@ resource "aws_ecs_service" "user" {
   launch_type     = "FARGATE"
   health_check_grace_period_seconds = 60
 
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["user"].arn; container_name = "user"; container_port = 8002 }
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["user"].arn
+    container_name   = "user"
+    container_port   = 8002
+  }
 }
 
 # --- Sync Service ---
@@ -720,11 +690,11 @@ resource "aws_ecs_task_definition" "sync" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
     name      = "sync"
-    image     = "${aws_ecr_repository.repos["sync-service"].repository_url}:latest"
+    image     = "${aws_ecr_repository.repos["sync-service"].repository_url}:dev"
     essential = true
     command   = ["python", "manage.py", "runserver", "0.0.0.0:8009"]
     portMappings = [{ containerPort = 8009 }]
@@ -741,8 +711,15 @@ resource "aws_ecs_service" "sync" {
   launch_type     = "FARGATE"
   health_check_grace_period_seconds = 60
 
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["sync"].arn; container_name = "sync"; container_port = 8009 }
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["sync"].arn
+    container_name   = "sync"
+    container_port   = 8009
+  }
 }
 
 # --- 4.3 CORE GROUP (Cmd, Qry, Routine, Exercise) ---
@@ -754,12 +731,17 @@ resource "aws_ecs_task_definition" "work_cmd" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "work-cmd", image = "${aws_ecr_repository.repos["workout-command-service"].repository_url}:latest", essential = true,
+    name = "work-cmd", image = "${aws_ecr_repository.repos["workout-command-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8003"], portMappings = [{ containerPort = 8003 }],
-    environment = [{ name = "MONGO_HOST", value = aws_instance.mongo.private_ip }, { name = "MONGO_PORT", value = "27017" }],
+    environment = [
+      { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
+      { name = "MONGO_PORT", value = "27017" },
+      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-cmd" } }
   }])
 }
@@ -770,9 +752,16 @@ resource "aws_ecs_service" "work_cmd" {
   task_definition = aws_ecs_task_definition.work_cmd.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn; container_name = "work-cmd"; container_port = 8003 }
+  health_check_grace_period_seconds = 300
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn
+    container_name   = "work-cmd"
+    container_port   = 8003
+  }
 }
 
 # --- Workout Query ---
@@ -782,12 +771,17 @@ resource "aws_ecs_task_definition" "work_qry" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "work-qry", image = "${aws_ecr_repository.repos["workout-query-service"].repository_url}:latest", essential = true,
+    name = "work-qry", image = "${aws_ecr_repository.repos["workout-query-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8004"], portMappings = [{ containerPort = 8004 }],
-    environment = [{ name = "MONGO_HOST", value = aws_instance.mongo.private_ip }, { name = "MONGO_PORT", value = "27017" }],
+    environment = [
+      { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
+      { name = "MONGO_PORT", value = "27017" },
+      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-qry" } }
   }])
 }
@@ -798,9 +792,16 @@ resource "aws_ecs_service" "work_qry" {
   task_definition = aws_ecs_task_definition.work_qry.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn; container_name = "work-qry"; container_port = 8004 }
+  health_check_grace_period_seconds = 300
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn
+    container_name   = "work-qry"
+    container_port   = 8004
+  }
 }
 
 # --- Routine ---
@@ -810,12 +811,15 @@ resource "aws_ecs_task_definition" "routine" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "routine", image = "${aws_ecr_repository.repos["routine-service"].repository_url}:latest", essential = true,
+    name = "routine", image = "${aws_ecr_repository.repos["routine-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8005"], portMappings = [{ containerPort = 8005 }],
-    environment = [{ name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/routine_db" }],
+    environment = [
+      { name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/routine_db" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "routine" } }
   }])
 }
@@ -826,9 +830,16 @@ resource "aws_ecs_service" "routine" {
   task_definition = aws_ecs_task_definition.routine.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["routine"].arn;  container_name = "routine";  container_port = 8005 }
+  health_check_grace_period_seconds = 300
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["routine"].arn
+    container_name   = "routine"
+    container_port   = 8005
+  }
 }
 
 # --- Exercise Library ---
@@ -838,12 +849,17 @@ resource "aws_ecs_task_definition" "exercise" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "exercise", image = "${aws_ecr_repository.repos["exercise-library-service"].repository_url}:latest", essential = true,
+    name = "exercise", image = "${aws_ecr_repository.repos["exercise-library-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8006"], portMappings = [{ containerPort = 8006 }],
-    environment = [{ name = "MONGO_HOST", value = aws_instance.mongo.private_ip }, { name = "MONGO_PORT", value = "27017" }],
+    environment = [
+      { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
+      { name = "MONGO_PORT", value = "27017" },
+      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "exercise" } }
   }])
 }
@@ -854,9 +870,16 @@ resource "aws_ecs_service" "exercise" {
   task_definition = aws_ecs_task_definition.exercise.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn; container_name = "exercise"; container_port = 8006 }
+  health_check_grace_period_seconds = 300
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn
+    container_name   = "exercise"
+    container_port   = 8006
+  }
 }
 
 # --- 4.4 HEAVY GROUP (Video, Notify, Analytics) ---
@@ -868,12 +891,17 @@ resource "aws_ecs_task_definition" "video" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "video", image = "${aws_ecr_repository.repos["video-service"].repository_url}:latest", essential = true,
+    name = "video", image = "${aws_ecr_repository.repos["video-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8007"], portMappings = [{ containerPort = 8007 }],
-    environment = [{ name = "MONGO_HOST", value = aws_instance.mongo.private_ip }, { name = "MONGO_PORT", value = "27017" }],
+    environment = [
+      { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
+      { name = "MONGO_PORT", value = "27017" },
+      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "video" } }
   }])
 }
@@ -884,9 +912,16 @@ resource "aws_ecs_service" "video" {
   task_definition = aws_ecs_task_definition.video.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn;     container_name = "video";     container_port = 8007 }
+  health_check_grace_period_seconds = 300
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn
+    container_name   = "video"
+    container_port   = 8007
+  }
 }
 
 # --- Notify ---
@@ -896,10 +931,10 @@ resource "aws_ecs_task_definition" "notify" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "notify", image = "${aws_ecr_repository.repos["notification-service"].repository_url}:latest", essential = true,
+    name = "notify", image = "${aws_ecr_repository.repos["notification-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8008"], portMappings = [{ containerPort = 8008 }],
     environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "notify" } }
@@ -913,8 +948,15 @@ resource "aws_ecs_service" "notify" {
   desired_count   = 1
   launch_type     = "FARGATE"
   health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn;    container_name = "notify";    container_port = 8008 }
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn
+    container_name   = "notify"
+    container_port   = 8008
+  }
 }
 
 # --- Analytics ---
@@ -924,10 +966,10 @@ resource "aws_ecs_task_definition" "analytics" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name = "analytics", image = "${aws_ecr_repository.repos["analytics-service"].repository_url}:latest", essential = true,
+    name = "analytics", image = "${aws_ecr_repository.repos["analytics-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8010"], portMappings = [{ containerPort = 8010 }],
     environment = [{ name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/analytics_db" }],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "analytics" } }
@@ -941,8 +983,15 @@ resource "aws_ecs_service" "analytics" {
   desired_count   = 1
   launch_type     = "FARGATE"
   health_check_grace_period_seconds = 60
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn; container_name = "analytics"; container_port = 8010 }
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn
+    container_name   = "analytics"
+    container_port   = 8010
+  }
 }
 
 

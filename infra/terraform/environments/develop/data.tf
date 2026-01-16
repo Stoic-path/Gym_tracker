@@ -18,3 +18,8 @@ data "aws_ami" "amazon_linux_2023" {
     values = ["hvm"]
   }
 }
+
+# 3. Get the existing LabRole (AWS Academy restriction)
+data "aws_iam_role" "lab_role" {
+  name = "LabRole"
+}
