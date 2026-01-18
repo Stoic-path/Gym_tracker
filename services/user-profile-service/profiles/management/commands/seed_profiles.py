@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from profiles.models import UserProfile
+import uuid
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial user profiles'
@@ -7,21 +8,18 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding User Profiles...')
         
-        # Eliminar datos viejos para evitar duplicados en pruebas
-        UserProfile.objects.all().delete()
-        
-        # Crear perfil de prueba
-        UserProfile.objects.create(
-            user_id="u-seed-123",
-            email="admin@gymtracker.com",
-            full_name="Admin Musculoso",
-            bio="Entrenando desde 2026 para el Mr. Olympia Distributed Systems Edition."
-        )
-        UserProfile.objects.create(
-            user_id="u-seed-456",
-            email="client@gymtracker.com",
-            full_name="Cliente Fitness",
-            bio="Corriendo en Docker Containers."
-        )
+        # Generar perfiles para los 100 usuarios deterministas
+        for i in range(100):
+            email = f"user_{i}@gymtracker.com"
+            user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, email))
+            
+            UserProfile.objects.get_or_create(
+                user_id=user_id,
+                defaults={
+                    'email': email,
+                    'full_name': f"Usuario de Prueba {i}",
+                    'bio': "Generado automáticamente por seed determinista."
+                }
+            )
         
         self.stdout.write(self.style.SUCCESS('Successfully seeded User Profiles!'))

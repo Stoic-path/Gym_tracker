@@ -16,24 +16,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from django.http import JsonResponse
+from analytics.views import AnalyticsSummaryView
 
-class AnalyticsSummaryView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-    
-    def get(self, request):
-        return Response({
-            "total_workouts": 142,
-            "calories_burned": 35000,
-            "current_streak": 5,
-            "favorite_muscle": "Chest",
-            "source": "Analytics Service (Instance #7)"
-        })
+def health_check(request):
+    return JsonResponse({"status": "healthy", "service": "analytics-service"})
+
+def root_view(request):
+    return JsonResponse({"message": "Analytics Service API", "endpoints": ["/api/analytics/summary", "/health"]})
 
 urlpatterns = [
+    path('', root_view),
+    path('health/', health_check),
     path('admin/', admin.site.urls),
+    # Ruta específica para el resumen de estadísticas
     path('api/analytics/summary', AnalyticsSummaryView.as_view()),
 ]

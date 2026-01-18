@@ -18,17 +18,12 @@ $env:AWS_SECRET_ACCESS_KEY = $SecretKey
 $env:AWS_SESSION_TOKEN = $SessionToken
 $env:AWS_DEFAULT_REGION = "us-east-1"
 
-# 3. Actualizar GitHub Secrets (¡LA MAGIA!) 
 Write-Host "-----------------------------------------------------"
 Write-Host " Actualizando secretos en aws configure .." -ForegroundColor Yellow
-
-# Usamos --clobber para sobrescribir sin preguntar
-gh secret set AWS_ACCESS_KEY_ID --body "$AccessKey" --clobber
-gh secret set AWS_SECRET_ACCESS_KEY --body "$SecretKey" --clobber
-gh secret set AWS_SESSION_TOKEN --body "$SessionToken" --clobber
-
-Write-Host " Secretos de GitHub actualizados." -ForegroundColor Green
-Write-Host "-----------------------------------------------------"
+aws configure set aws_access_key_id $AccessKey
+aws configure set aws_secret_access_key $SecretKey
+aws configure set aws_session_token $SessionToken
+aws configure set default.region "us-east-1"
 
 # 4. Borrar Estado Anterior de Terraform
 Write-Host " Limpiando estado corrupto de Terraform..."
@@ -38,10 +33,10 @@ if (Test-Path terraform.tfstate) { Remove-Item -Force terraform.tfstate }
 if (Test-Path terraform.tfstate.backup) { Remove-Item -Force terraform.tfstate.backup }
 
 # 5. Terraform Init y Apply
-Write-Host " Ejecutando Terraform Init..."
+Write-Host " Ejecutando Terraform Init..." -ForegroundColor Blue
 terraform init
 
-Write-Host " Ejecutando Terraform Apply..."
+Write-Host " Ejecutando Terraform Apply..." -ForegroundColor Purple
 terraform apply -auto-approve -input=false
 
 Write-Host "-----------------------------------------------------"
@@ -49,4 +44,11 @@ Write-Host " TODO LISTO: Infraestructura creada." -ForegroundColor Green
 Write-Host " NUEVO DNS:" -ForegroundColor Yellow
 terraform output alb_dns_name
 Write-Host "-----------------------------------------------------"
-Write-Host " TIP: Ahora  ve a GitHub y actualiza los secrets en el repo de la aplicacion." -ForegroundColor Cyan
+Write-Host " TIP:   En caso de ser necesario, actualiza los secrets en el repo de la aplicacion en GitHub." -ForegroundColor Cyan
+
+Write-Host "-----------------------------------------------------"
+Write-Host " ATENCION: Al ser una cuenta nueva, los repositorios ECR estan VACIOS." -ForegroundColor Red
+$Build = Read-Host " Deseas construir y subir las imagenes Docker ahora? (S/N)"
+if ($Build -eq "S" -or $Build -eq "s") {
+    & "$PSScriptRoot\build_and_push.ps1"
+}
