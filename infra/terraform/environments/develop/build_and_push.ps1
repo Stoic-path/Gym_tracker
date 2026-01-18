@@ -14,7 +14,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Obtener Account ID y Login ECR
-Write-Host "Obteniendo credenciales de ECR..." -ForegroundColor Cyan
+Write-Host "Obteniendo credenciales de ECR..." -ForegroundColor DarkYellow
 $AccountId = aws sts get-caller-identity --query Account --output text
 if (-not $AccountId) { Write-Error "No se pudo obtener el AWS Account ID. Ejecuta switch_account.ps1 primero."; exit }
 
@@ -84,4 +84,4 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host "--------------------------------------------------" -ForegroundColor Green
-Write-Host "¡Proceso finalizado! Verifica tus repositorios en DockerHub." -ForegroundColor Green
+Write-Host "¡Proceso finalizado!." -ForegroundColor Green

@@ -4,7 +4,7 @@
 param (
     [string]$KeyFile = "labsuser.pem", # Nombre por defecto en AWS Academy
     [string]$User = "ec2-user",        # Usuario por defecto en Amazon Linux
-    [string]$InstanceName = "gym-tracker-frontend"
+    [string]$InstanceName = "gym-tracker-bastion"
 )
 
 $ErrorActionPreference = "Stop"

@@ -226,6 +226,30 @@ resource "aws_security_group" "db_sg" {
     security_groups = [aws_security_group.bastion_sg.id]
   }
 
+  # Permitir conexión directa a Postgres desde Bastion (para depuración)
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  # Permitir conexión directa a Mongo desde Bastion (para depuración)
+  ingress {
+    from_port       = 27017
+    to_port         = 27017
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  # Permitir conexión directa a Redis desde Bastion (para depuración)
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -247,8 +271,56 @@ resource "aws_instance" "bastion" {
   user_data = <<-EOF
     #!/bin/bash
     yum update -y
+    
+    # --- 1. Herramientas Base ---
     curl -L --output cloudflared.rpm https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
     yum localinstall -y cloudflared.rpm
+
+    # --- 2. Instalar Clientes de Base de Datos ---
+    # PostgreSQL Client
+    dnf install -y postgresql15
+    
+    # Redis Client
+    dnf install -y redis6
+    if ! command -v redis-cli &> /dev/null && command -v redis6-cli &> /dev/null; then
+        ln -s /usr/bin/redis6-cli /usr/bin/redis-cli
+    fi
+    
+    # MongoDB Client (Mongosh)
+    echo "[mongodb-org-7.0]
+    name=MongoDB Repository
+    baseurl=https://repo.mongodb.org/yum/amazon/2023/mongodb-org/7.0/x86_64/
+    gpgcheck=1
+    enabled=1
+    gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc" | tee /etc/yum.repos.d/mongodb-org-7.0.repo
+    dnf install -y mongodb-mongosh
+
+    # --- 3. Generar Script de Verificación Automática ---
+    # Terraform reemplazará las variables con las IPs reales al crear la instancia
+    cat <<'SCRIPT' > /home/ec2-user/verify_dbs.sh
+    #!/bin/bash
+    echo "🐘 [PostgreSQL] Diagnóstico de Tablas (Auth DB)..."
+    # Listar tablas para verificar si las migraciones corrieron
+    PGPASSWORD='gym_password_123' psql -h ${aws_instance.postgres.private_ip} -U gym_user -d auth_db -c "\dt"
+    
+    echo "🔍 [PostgreSQL] Verificando tablas públicas..."
+    PGPASSWORD='gym_password_123' psql -h ${aws_instance.postgres.private_ip} -U gym_user -d auth_db -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+
+    echo -e "\n👤 [PostgreSQL] Diagnóstico de Tablas (User Profile DB)..."
+    PGPASSWORD='gym_password_123' psql -h ${aws_instance.postgres.private_ip} -U gym_user -d user_profile_db -c "\dt" || echo "⚠️ No se pudo conectar a user_profile_db"
+
+    echo -e "\n📊 [PostgreSQL] Diagnóstico de Tablas (Analytics DB)..."
+    PGPASSWORD='gym_password_123' psql -h ${aws_instance.postgres.private_ip} -U gym_user -d analytics_db -c "\dt" || echo "⚠️ No se pudo conectar a analytics_db"
+
+    echo -e "\n🍃 [MongoDB] Verificando Workouts..."
+    mongosh "mongodb://${aws_instance.mongo.private_ip}:27017/workout_query_db" --quiet --eval "print('Total Docs: ' + db.workouts.countDocuments({}));"
+
+    echo -e "\n🔴 [Redis] Verificando Cache..."
+    redis-cli -h ${aws_instance.redis.private_ip} -p 6379 PING
+    SCRIPT
+    
+    chmod +x /home/ec2-user/verify_dbs.sh
+    chown ec2-user:ec2-user /home/ec2-user/verify_dbs.sh
   EOF
 
   tags = {
@@ -330,8 +402,8 @@ resource "aws_lb_target_group" "web" {
   target_type = "ip" # Requerido para Fargate
   
   health_check {
-    path    = "/health"
-    matcher = "200"
+    path    = "/"
+    matcher = "200-499"
   }
 }
 
@@ -345,6 +417,8 @@ resource "aws_lb_target_group" "access_tgs" {
   health_check {
     path    = "/"
     matcher = "200-499"
+    timeout  = 10
+    interval = 60
   }
 }
 
@@ -358,6 +432,8 @@ resource "aws_lb_target_group" "core_tgs" {
   health_check {
     path    = "/"
     matcher = "200-499"
+    timeout  = 10
+    interval = 60
   }
 }
 
@@ -371,6 +447,8 @@ resource "aws_lb_target_group" "heavy_tgs" {
   health_check {
     path    = "/"
     matcher = "200-499"
+    timeout  = 10
+    interval = 60
   }
 }
 
@@ -597,6 +675,8 @@ resource "aws_ecs_service" "web" {
     container_name   = "web"
     container_port   = 80
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- 4.2 ACCESS GROUP (Auth, User, Sync) ---
@@ -615,11 +695,12 @@ resource "aws_ecs_task_definition" "auth" {
     name      = "auth"
     image     = "${aws_ecr_repository.repos["auth-service"].repository_url}:dev"
     essential = true
-    command   = ["sh", "-c", "python manage.py migrate && python init_user.py && python manage.py runserver 0.0.0.0:8001"]
+    command   = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py migrate && python init_user.py && python seed_data.py && python manage.py runserver 0.0.0.0:8001"]
     portMappings = [{ containerPort = 8001 }]
     environment = [
-      { name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/auth_db" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/auth_db" },
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" }
     ]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "auth" } }
   }])
@@ -631,7 +712,7 @@ resource "aws_ecs_service" "auth" {
   task_definition = aws_ecs_task_definition.auth.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
+  health_check_grace_period_seconds = 300
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -642,6 +723,8 @@ resource "aws_ecs_service" "auth" {
     container_name   = "auth"
     container_port   = 8001
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- User Profile Service ---
@@ -657,9 +740,9 @@ resource "aws_ecs_task_definition" "user" {
     name      = "user"
     image     = "${aws_ecr_repository.repos["user-profile-service"].repository_url}:dev"
     essential = true
-    command   = ["sh", "-c", "python manage.py migrate && python manage.py seed_profiles && python manage.py runserver 0.0.0.0:8002"]
+    command   = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py migrate && (python manage.py seed_profiles || true) && python manage.py runserver 0.0.0.0:8002"]
     portMappings = [{ containerPort = 8002 }]
-    environment = [{ name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/user_profile_db" }]
+    environment = [{ name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/user_profile_db" }]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "user" } }
   }])
 }
@@ -670,7 +753,7 @@ resource "aws_ecs_service" "user" {
   task_definition = aws_ecs_task_definition.user.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
+  health_check_grace_period_seconds = 300
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -681,6 +764,8 @@ resource "aws_ecs_service" "user" {
     container_name   = "user"
     container_port   = 8002
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Sync Service ---
@@ -698,7 +783,7 @@ resource "aws_ecs_task_definition" "sync" {
     essential = true
     command   = ["python", "manage.py", "runserver", "0.0.0.0:8009"]
     portMappings = [{ containerPort = 8009 }]
-    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }]
+    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }, { name = "REDIS_PORT", value = "6379" }]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "sync" } }
   }])
 }
@@ -709,7 +794,7 @@ resource "aws_ecs_service" "sync" {
   task_definition = aws_ecs_task_definition.sync.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
+  health_check_grace_period_seconds = 300
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -720,6 +805,8 @@ resource "aws_ecs_service" "sync" {
     container_name   = "sync"
     container_port   = 8009
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- 4.3 CORE GROUP (Cmd, Qry, Routine, Exercise) ---
@@ -735,12 +822,12 @@ resource "aws_ecs_task_definition" "work_cmd" {
 
   container_definitions = jsonencode([{
     name = "work-cmd", image = "${aws_ecr_repository.repos["workout-command-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8003"], portMappings = [{ containerPort = 8003 }],
+    command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.mongo.private_ip}\", 27017)) != 0]' && python manage.py migrate && python manage.py runserver 0.0.0.0:8003"], portMappings = [{ containerPort = 8003 }],
     environment = [
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
-      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-cmd" } }
   }])
@@ -762,6 +849,8 @@ resource "aws_ecs_service" "work_cmd" {
     container_name   = "work-cmd"
     container_port   = 8003
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Workout Query ---
@@ -775,12 +864,12 @@ resource "aws_ecs_task_definition" "work_qry" {
 
   container_definitions = jsonencode([{
     name = "work-qry", image = "${aws_ecr_repository.repos["workout-query-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8004"], portMappings = [{ containerPort = 8004 }],
+    command = ["sh", "-c", "python manage.py migrate && python manage.py seed_mongo && python manage.py runserver 0.0.0.0:8004"], portMappings = [{ containerPort = 8004 }],
     environment = [
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
-      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-qry" } }
   }])
@@ -802,6 +891,8 @@ resource "aws_ecs_service" "work_qry" {
     container_name   = "work-qry"
     container_port   = 8004
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Routine ---
@@ -815,9 +906,9 @@ resource "aws_ecs_task_definition" "routine" {
 
   container_definitions = jsonencode([{
     name = "routine", image = "${aws_ecr_repository.repos["routine-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8005"], portMappings = [{ containerPort = 8005 }],
+    command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py migrate && python manage.py runserver 0.0.0.0:8005"], portMappings = [{ containerPort = 8005 }],
     environment = [
-      { name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/routine_db" },
+      { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/routine_db" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "routine" } }
@@ -840,6 +931,8 @@ resource "aws_ecs_service" "routine" {
     container_name   = "routine"
     container_port   = 8005
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Exercise Library ---
@@ -857,8 +950,8 @@ resource "aws_ecs_task_definition" "exercise" {
     environment = [
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
-      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "exercise" } }
   }])
@@ -880,6 +973,8 @@ resource "aws_ecs_service" "exercise" {
     container_name   = "exercise"
     container_port   = 8006
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- 4.4 HEAVY GROUP (Video, Notify, Analytics) ---
@@ -899,8 +994,8 @@ resource "aws_ecs_task_definition" "video" {
     environment = [
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
-      { name = "MONGO_URI", value = "mongodb://gym_user:gym_password_123@${aws_instance.mongo.private_ip}:27017" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "video" } }
   }])
@@ -922,6 +1017,8 @@ resource "aws_ecs_service" "video" {
     container_name   = "video"
     container_port   = 8007
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Notify ---
@@ -935,8 +1032,8 @@ resource "aws_ecs_task_definition" "notify" {
 
   container_definitions = jsonencode([{
     name = "notify", image = "${aws_ecr_repository.repos["notification-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8008"], portMappings = [{ containerPort = 8008 }],
-    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }],
+    command = ["sh", "-c", "python manage.py migrate && python seed_data.py && python manage.py runserver 0.0.0.0:8008"], portMappings = [{ containerPort = 8008 }],
+    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }, { name = "REDIS_PORT", value = "6379" }],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "notify" } }
   }])
 }
@@ -947,7 +1044,7 @@ resource "aws_ecs_service" "notify" {
   task_definition = aws_ecs_task_definition.notify.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
+  health_check_grace_period_seconds = 300
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
     security_groups = [aws_security_group.app_sg.id]
@@ -957,6 +1054,8 @@ resource "aws_ecs_service" "notify" {
     container_name   = "notify"
     container_port   = 8008
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 # --- Analytics ---
@@ -970,8 +1069,8 @@ resource "aws_ecs_task_definition" "analytics" {
 
   container_definitions = jsonencode([{
     name = "analytics", image = "${aws_ecr_repository.repos["analytics-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8010"], portMappings = [{ containerPort = 8010 }],
-    environment = [{ name = "DATABASE_URL", value = "postgres://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/analytics_db" }],
+    command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py makemigrations analytics && python manage.py migrate && (python manage.py seed_analytics || true) && python manage.py runserver 0.0.0.0:8010"], portMappings = [{ containerPort = 8010 }],
+    environment = [{ name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/analytics_db" }],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "analytics" } }
   }])
 }
@@ -982,7 +1081,7 @@ resource "aws_ecs_service" "analytics" {
   task_definition = aws_ecs_task_definition.analytics.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  health_check_grace_period_seconds = 60
+  health_check_grace_period_seconds = 300
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
     security_groups = [aws_security_group.app_sg.id]
@@ -992,6 +1091,8 @@ resource "aws_ecs_service" "analytics" {
     container_name   = "analytics"
     container_port   = 8010
   }
+
+  depends_on = [aws_lb_listener.http]
 }
 
 
