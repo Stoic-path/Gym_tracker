@@ -1,143 +1,115 @@
-# GymTrack Cloud 🏋️‍♂️☁️
+# Gym Tracker Distributed System
 
-**Distributed Workout Tracking System** *Faculty of Physical Education - Universidad Central del Ecuador*
+Distributed gym tracking system based on microservices, deployed on AWS using **ECS Fargate** for compute and **EC2** for the data persistence layer.
 
-## 📖 Project Overview
+## 📋 Table of Contents
+- [Architecture](#-architecture)
+- [Prerequisites](#-prerequisites)
+- [Infrastructure Management (AWS Academy)](#-infrastructure-management-aws-academy)
+- [Deployment and Build](#-deployment-and-build)
+- [Verification and Debugging](#-verification-and-debugging)
+- [Manual Database Commands](#-manual-database-commands)
 
-GymTrack Cloud is a distributed system designed to track strength training, routines, and physical progress. This project implements a **Microservices Architecture** with **Polyglot Persistence**, tailored for a high-concurrency academic environment and deployed on AWS using Infrastructure as Code (IaC).
-
-The system supports multiple client platforms (Web, Mobile, Desktop) and manages data flow through a hybrid infrastructure of Relational, Document-oriented, and Key-Value databases.
-
----
-
-## 🏗 Architecture & Monorepo Structure
-
-This repository is a **Polyglot Monorepo** managed by **Moonrepo**. It organizes the codebase into three main workspaces.
-
-### Directory Structure
-
-* **`apps/`**: Client-side applications.
-    * `web/`: React application (Vite) for Users and Admin dashboard.
-    * *(Planned)* `mobile/`: Flutter application.
-    * *(Planned)* `desktop/`: Electron/Tauri app.
-* **`services/`**: The 10 Backend Microservices (Django REST Framework).
-* **`packages/`**: Shared libraries and UI kits.
-* **`infra/`**: Infrastructure as Code (Terraform) and Setup Scripts.
-
----
-
-## 🧩 Microservices & Infrastructure Map
-
-The system is divided into domain-specific services, communicating via HTTP/REST within a private VPC.
-
-| Service Name | Port | Database | Technology | Responsibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Auth Service** | `8001` | Postgres | Django/SQL | Identity, JWT, RBAC |
-| **User Profile** | `8002` | Postgres | Django/SQL | Demographics, Body measurements |
-| **Routine** | `8006` | Postgres | Django/SQL | Training plans structure |
-| **Analytics** | `8007` | Postgres | Django/SQL | Progress stats & Reporting |
-| **Notification** | `8008` | Postgres* | Django/SQL | Async Email/Push logs (*Uses Redis for Queue) |
-| **Workout Cmd** | `8003` | MongoDB | Django/Djongo | **CQRS (Write)** - Workout logging |
-| **Workout Query** | `8004` | MongoDB | Django/Djongo | **CQRS (Read)** - History retrieval |
-| **Exercise Lib** | `8005` | MongoDB | Django/Djongo | Catalog of exercises |
-| **Video** | `8009` | MongoDB | Django/Djongo | Video Metadata |
-| **Sync** | `8010` | Redis* | Django/SQLite | Offline sync state (*Uses Redis as primary store) |
-| **Web Client** | `80` | N/A | React/Nginx | Frontend Interface served via ALB |
-
-### Cloud Infrastructure (AWS)
-* **Application Load Balancer (ALB):** Public entry point, handles SSL and routing rules.
-* **Auto Scaling Groups (ASG):** One ASG per microservice for high availability.
-* **Polyglot Persistence Layer (EC2):**
-    * **PostgreSQL:** Primary relational store.
-    * **MongoDB:** Document store for complex structures.
-    * **Redis:** In-memory cache and message broker.
-
----
+## 🏗 Architecture
+The system consists of:
+- **Frontend**: React (SPA) served by Nginx in containers.
+- **Backend**: 10+ Django/Python Microservices (Auth, User, Workout, Analytics, etc.).
+- **Databases (Hosted on EC2)**:
+  - **PostgreSQL**: Relational data (Users, Profiles, Routines).
+  - **MongoDB**: Document data (Workout History, Videos).
+  - **Redis**: Cache, Message Queues, and Sessions.
+- **AWS Infrastructure**:
+  - **ECS Fargate**: Serverless container orchestration.
+  - **ALB (Application Load Balancer)**: Path-based traffic routing (`/api/auth`, `/api/workouts`, etc.).
+  - **VPC**: Private network for services/DBs and public for ALB/Bastion/NAT.
 
 ## 🛠 Prerequisites
+- AWS CLI installed.
+- Terraform installed.
+- Docker Desktop running.
+- PowerShell (to run utility scripts).
+- `labsuser.pem` file (downloaded from AWS Academy) located in `infra/terraform/environments/develop/`.
 
-To develop or deploy this project, you need:
+## 🚀 Infrastructure Management (AWS Academy)
+Because AWS Academy credentials expire frequently, use these scripts to manage the lifecycle.
 
-1.  **Development:**
-    * Node.js (v20+) & `pnpm`
-    * Python 3.10+
-    * Moonrepo: `npm install -g @moonrepo/cli`
-    * Docker Desktop
-2.  **Deployment (DevOps):**
-    * Terraform (v1.5+)
-    * AWS CLI (configured with valid credentials)
+### 1. Switch Credentials (`switch_account.ps1`)
+**Location:** `infra/terraform/environments/develop/switch_account.ps1`
 
----
+This script is **CRITICAL**. Run it every time you start a new session in AWS Academy or when the token expires.
+- Updates credentials in your local environment.
+- Updates **GitHub Secrets** so CI/CD keeps working.
+- Cleans corrupt Terraform state.
+- Runs `terraform apply` to provision or update infrastructure.
 
-## 🚀 Getting Started (Local Development)
-
-The recommended way to run the full system locally is via Docker Compose.
-
-```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd Gym_tracker
-
-# 2. Build and Start all services
-docker compose up --build -d
-
-# 3. Check status
-docker compose ps
+```powershell
+./infra/terraform/environments/develop/switch_account.ps1
 ```
 
-### Moonrepo Workflow
-Use Moonrepo for fast local linting and testing without full containerization.
+## 🐳 Despliegue y Construcción
 
-```bash
-# Install dependencies
-pnpm install
+### Construir y Subir Imágenes (`build_and_push.ps1`)
+**Ubicación:** `infra/terraform/environments/develop/build_and_push.ps1`
 
-# Run linting across all services
-moon run :lint
+Compila las imágenes Docker de todos los microservicios y el frontend, y las sube a Amazon ECR.
+- Etiqueta las imágenes como `:dev` y `:latest` para asegurar compatibilidad.
+- Requiere que Docker esté corriendo.
 
-# Run tests for a specific service
-moon run auth-service:test
-
-# Start frontend locally
-moon run web:dev
+```powershell
+./infra/terraform/environments/develop/build_and_push.ps1
 ```
 
----
+## 🔍 Verificación y Debugging
 
-## ☁️ Deployment Guide (AWS)
-This project uses Terraform to provision the infrastructure and GitHub Actions for CI/CD.
+### Conexión al Bastion Host (`connect_ssh.ps1`)
+**Ubicación:** `infra/terraform/environments/develop/connect_ssh.ps1`
 
-### 1. Infrastructure Provisioning (Terraform)
+Conecta automáticamente por SSH a la instancia **Bastion Host**.
+- Busca dinámicamente la IP pública de la instancia Bastion.
+- Usa la llave `labsuser.pem` para autenticar.
 
-We use a "Fire and Forget" strategy for the initial infrastructure creation.
-
-```bash
-cd infra/terraform/environments/develop
-
-# Initialize Terraform
-terraform init
-
-# Preview changes
-terraform plan
-
-# Apply infrastructure (Creates VPC, EC2s, ALB, ASGs)
-terraform apply
+```powershell
+./infra/terraform/environments/develop/connect_ssh.ps1
 ```
 
-> **Note:** This generates the `alb_dns_name` and private `database_ips` required for the application configuration.
+### Script de Verificación de Bases de Datos (`./verify_dbs.sh`)
+**Contexto:** Este script **NO** está en tu repositorio local. Se genera **automáticamente** dentro del servidor Bastion (EC2) cada vez que Terraform despliega la infraestructura. Terraform inyecta las IPs privadas correctas de las bases de datos en este script.
 
-### 2. Continuous Deployment (CI/CD)
+**Para qué sirve:** Verifica instantáneamente si las bases de datos (Postgres, Mongo, Redis) están accesibles y si tienen datos (semillas).
 
-The software delivery is automated via GitHub Actions:
+**Pasos para usarlo:**
+1. Conéctate al Bastion usando `connect_ssh.ps1`.
+2. Una vez dentro de la terminal Linux (`[ec2-user@... ~]$`), ejecuta:
 
-* **CI:** Builds Docker images for all services and pushes them to DockerHub.
-* **CD:** Triggers an Instance Refresh in AWS Auto Scaling Groups to pull the new images and update the running containers with zero downtime.
+```bash
+./verify_dbs.sh
+```
 
-### 3. Environment Configuration
+**Salida esperada:**
+- **PostgreSQL**: Muestra el conteo de usuarios (debería ser >100 si el seed corrió).
+- **MongoDB**: Muestra el conteo de documentos de entrenamientos.
+- **Redis**: Muestra el tamaño de la caché.
 
-The services are configured to be Cloud Native. They automatically detect whether they are running locally (Docker Compose) or in AWS (Terraform) by checking environment variables:
+## 💻 Comandos Manuales de Base de Datos
+Si necesitas explorar las bases de datos manualmente desde el Bastion Host (porque están en una red privada), usa estos comandos.
 
-* `DB_HOST`: Injected by Terraform User Data.
-* `REDIS_HOST`: Injected by Terraform User Data.
-* `VITE_API_URL`: Configured in Frontend build time.
+> **Nota:** Necesitas obtener las IPs privadas ejecutando `terraform output database_ips` en tu máquina local o viendo el contenido de `verify_dbs.sh` en el Bastion (`cat verify_dbs.sh`).
 
+### PostgreSQL
+```bash
+# Conectar a la base de datos de autenticación
+PGPASSWORD='gym_password_123' psql -h <IP_PRIVADA_POSTGRES> -U gym_user -d auth_db
+```
+
+### MongoDB
+```bash
+# Conectar a la base de datos de consultas de entrenamientos
+mongosh "mongodb://<IP_PRIVADA_MONGO>:27017/workout_query_db"
+```
+
+### Redis
+```bash
+# Verificar conexión y claves
+redis-cli -h <IP_PRIVADA_REDIS> -p 6379 ping
+redis-cli -h <IP_PRIVADA_REDIS> -p 6379 dbsize
+```
