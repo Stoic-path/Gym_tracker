@@ -367,6 +367,32 @@ resource "aws_instance" "redis" {
   }
 }
 
+# --- S3 BUCKET (VIDEOS) ---
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
+resource "aws_s3_bucket" "videos" {
+  bucket        = "${var.project_name}-videos-${random_id.bucket_suffix.hex}"
+  force_destroy = true # Permite destruir el bucket aunque tenga videos (útil para labs)
+
+  tags = {
+    Name = "${var.project_name}-videos"
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "videos" {
+  bucket = aws_s3_bucket.videos.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 # --- 3. LOAD BALANCING (ALB - API GATEWAY) ---
 # Implementacion de API Gateway nativo usando ALB con Path-Based Routing.
 # Enruta trafico de frontend y microservicios sin servidores intermedios.
@@ -946,12 +972,14 @@ resource "aws_ecs_task_definition" "exercise" {
 
   container_definitions = jsonencode([{
     name = "exercise", image = "${aws_ecr_repository.repos["exercise-library-service"].repository_url}:dev", essential = true,
-    command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8006"], portMappings = [{ containerPort = 8006 }],
+    command = ["sh", "-c", "python manage.py makemigrations exercises && python manage.py migrate && python manage.py seed_exercises && python manage.py runserver 0.0.0.0:8006"], portMappings = [{ containerPort = 8006 }],
     environment = [
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "AWS_STORAGE_BUCKET_NAME", value = aws_s3_bucket.videos.bucket },
+      { name = "AWS_REGION", value = var.aws_region }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "exercise" } }
   }])
@@ -1115,4 +1143,9 @@ output "database_ips" {
 output "bastion_public_ip" {
   description = "IP Publica del Bastion Host"
   value       = aws_instance.bastion.public_ip
+}
+
+output "s3_bucket_name" {
+  description = "Nombre del Bucket S3 de Videos"
+  value       = aws_s3_bucket.videos.bucket
 }
