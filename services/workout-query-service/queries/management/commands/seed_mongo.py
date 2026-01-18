@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 import pymongo
 from datetime import datetime
+import uuid
 
 class Command(BaseCommand):
     help = 'Seeds MongoDB with sample workout history'
@@ -11,33 +12,31 @@ class Command(BaseCommand):
         
         # Connect to Mongo
         client = pymongo.MongoClient(settings.MONGO_URI)
-        db = client['gym_workouts_db'] # Explicit DB name
+        db = client['workout_query_db'] # Explicit DB name
         collection = db['workouts']
         
-        # Clean old data
-        collection.delete_many({})
+        # Idempotencia: Si ya hay datos, no hacemos nada
+        if collection.count_documents({}) > 0:
+            self.stdout.write(self.style.SUCCESS('Data already exists in MongoDB. Skipping seed.'))
+            return
         
         # Insert seed data
-        workouts = [
-            {
-                "name": "Full Body Crush (From Mongo)",
+        workouts = []
+        
+        # Generar workouts para los 100 usuarios deterministas
+        for i in range(100):
+            email = f"user_{i}@gymtracker.com"
+            user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, email))
+            
+            workouts.append({
+                "user_id": user_id,
+                "name": f"Rutina Aleatoria #{i}",
                 "date": datetime.now(),
-                "duration": 45,
+                "duration": 60,
                 "exercises": [
-                    {"name": "Squat", "sets": 3, "reps": 12},
-                    {"name": "Bench Press", "sets": 3, "reps": 10},
-                    {"name": "Rows", "sets": 3, "reps": 12}
+                    {"name": "Burpees", "sets": 4, "reps": 15}
                 ]
-            },
-            {
-                "name": "Cardio Blast (From Mongo)",
-                "date": datetime.now(),
-                "duration": 30,
-                "exercises": [
-                    {"name": "Treadmill", "sets": 1, "reps": 1500} # 1.5km
-                ]
-            }
-        ]
+            })
         
         collection.insert_many(workouts)
         
