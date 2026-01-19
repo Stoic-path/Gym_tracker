@@ -17,12 +17,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    # 'exercises', # Uncomment later
+    'corsheaders',
+    'exercises',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -52,8 +54,12 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # --- Database Configuration (MongoDB Native) ---
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'djongo',
+        'NAME': os.environ.get('MONGO_DB_NAME', 'exercise_library_db'),
+        'CLIENT': {
+            'host': os.environ.get('MONGO_HOST', 'localhost'),
+            'port': int(os.environ.get('MONGO_PORT', 27017)),
+        }
     }
 }
 
@@ -112,3 +118,13 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+# --- CORS CONFIGURATION ---
+CORS_ALLOW_ALL_ORIGINS = True
+
+# --- AWS S3 CONFIGURATION ---
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+
+# Nota: No necesitamos AWS_ACCESS_KEY_ID aquí porque ECS Fargate 
+# usa el "Task Role" (LabRole) para autenticarse automáticamente.
