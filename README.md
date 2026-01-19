@@ -48,6 +48,14 @@ This script is **CRITICAL**. Run it every time you start a new session in AWS Ac
 
 ## 🐳 Despliegue y Construcción
 
+### Levantar Infraestructura (AWS)
+Para desplegar (levantar) toda la infraestructura en AWS desde cero o aplicar cambios:
+
+```powershell
+# Este script inicializa Terraform y aplica la configuración
+./infra/terraform/environments/develop/switch_account.ps1
+```
+
 ### Construir y Subir Imágenes (`build_and_push.ps1`)
 **Ubicación:** `infra/terraform/environments/develop/build_and_push.ps1`
 
