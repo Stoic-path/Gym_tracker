@@ -121,3 +121,11 @@ mongosh "mongodb://<IP_PRIVADA_MONGO>:27017/workout_query_db"
 redis-cli -h <IP_PRIVADA_REDIS> -p 6379 ping
 redis-cli -h <IP_PRIVADA_REDIS> -p 6379 dbsize
 ```
+
+## 🔍 App desktop
+
+App desktop
+.\.venv\Scripts\Activate.ps1
+python main.py
+
+Usuarios: admin@example.com, user_4@gymtracker.com

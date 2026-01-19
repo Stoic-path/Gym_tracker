@@ -726,7 +726,8 @@ resource "aws_ecs_task_definition" "auth" {
     environment = [
       { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/auth_db" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "auth" } }
   }])
@@ -768,7 +769,10 @@ resource "aws_ecs_task_definition" "user" {
     essential = true
     command   = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py migrate && (python manage.py seed_profiles || true) && python manage.py runserver 0.0.0.0:8002"]
     portMappings = [{ containerPort = 8002 }]
-    environment = [{ name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/user_profile_db" }]
+    environment = [
+      { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/user_profile_db" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
+    ]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "user" } }
   }])
 }
@@ -809,7 +813,11 @@ resource "aws_ecs_task_definition" "sync" {
     essential = true
     command   = ["python", "manage.py", "runserver", "0.0.0.0:8009"]
     portMappings = [{ containerPort = 8009 }]
-    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }, { name = "REDIS_PORT", value = "6379" }]
+    environment = [
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
+    ]
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "sync" } }
   }])
 }
@@ -853,7 +861,8 @@ resource "aws_ecs_task_definition" "work_cmd" {
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-cmd" } }
   }])
@@ -895,7 +904,8 @@ resource "aws_ecs_task_definition" "work_qry" {
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-qry" } }
   }])
@@ -935,7 +945,8 @@ resource "aws_ecs_task_definition" "routine" {
     command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py migrate && python manage.py runserver 0.0.0.0:8005"], portMappings = [{ containerPort = 8005 }],
     environment = [
       { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/routine_db" },
-      { name = "REDIS_HOST", value = aws_instance.redis.private_ip }
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "routine" } }
   }])
@@ -979,7 +990,8 @@ resource "aws_ecs_task_definition" "exercise" {
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
       { name = "REDIS_PORT", value = "6379" },
       { name = "AWS_STORAGE_BUCKET_NAME", value = aws_s3_bucket.videos.bucket },
-      { name = "AWS_REGION", value = var.aws_region }
+      { name = "AWS_REGION", value = var.aws_region },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "exercise" } }
   }])
@@ -1023,7 +1035,8 @@ resource "aws_ecs_task_definition" "video" {
       { name = "MONGO_HOST", value = aws_instance.mongo.private_ip },
       { name = "MONGO_PORT", value = "27017" },
       { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
     ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "video" } }
   }])
@@ -1061,7 +1074,11 @@ resource "aws_ecs_task_definition" "notify" {
   container_definitions = jsonencode([{
     name = "notify", image = "${aws_ecr_repository.repos["notification-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python manage.py migrate && python seed_data.py && python manage.py runserver 0.0.0.0:8008"], portMappings = [{ containerPort = 8008 }],
-    environment = [{ name = "REDIS_HOST", value = aws_instance.redis.private_ip }, { name = "REDIS_PORT", value = "6379" }],
+    environment = [
+      { name = "REDIS_HOST", value = aws_instance.redis.private_ip },
+      { name = "REDIS_PORT", value = "6379" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "notify" } }
   }])
 }
@@ -1098,7 +1115,10 @@ resource "aws_ecs_task_definition" "analytics" {
   container_definitions = jsonencode([{
     name = "analytics", image = "${aws_ecr_repository.repos["analytics-service"].repository_url}:dev", essential = true,
     command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.postgres.private_ip}\", 5432)) != 0]' && python manage.py makemigrations analytics && python manage.py migrate && (python manage.py seed_analytics || true) && python manage.py runserver 0.0.0.0:8010"], portMappings = [{ containerPort = 8010 }],
-    environment = [{ name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/analytics_db" }],
+    environment = [
+      { name = "DATABASE_URL", value = "postgresql://gym_user:gym_password_123@${aws_instance.postgres.private_ip}:5432/analytics_db" },
+      { name = "DJANGO_SECRET_KEY", value = var.django_secret_key }
+    ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "analytics" } }
   }])
 }

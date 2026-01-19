@@ -57,3 +57,9 @@ variable "tg_heavy_group" {
     "analytics" = { port = 8010, path = "/api/analytics" }
   }
 }
+
+variable "django_secret_key" {
+  description = "Shared Secret Key for Django Microservices to ensure JWT compatibility"
+  type        = string
+  default     = "django-insecure-shared-secret-key-for-dev-environment-12345"
+}

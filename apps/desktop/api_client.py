@@ -9,7 +9,7 @@ class GymTrackerClient:
     def login(self, username, password):
         url = f"{self.base_url}{ENDPOINTS['login']}"
         try:
-            response = requests.post(url, json={"username": username, "password": password}, timeout=5)
+            response = requests.post(url, json={"email": username, "password": password}, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 self.token = data.get("access")
@@ -35,3 +35,4 @@ class GymTrackerClient:
             return False, response.text
         except Exception as e:
             return False, str(e)
+
