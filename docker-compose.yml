@@ -125,6 +125,7 @@ services:
     depends_on:
       - mongo
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
       - REDIS_HOST=redis
       - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
 
