@@ -84,9 +84,24 @@ resource "aws_route_table_association" "private_1" {
 resource "aws_security_group" "alb_sg" {
   name        = "${var.project_name}-alb-sg"
   vpc_id      = aws_vpc.main.id
-  ingress { from_port = 80; to_port = 80; protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
-  ingress { from_port = 443; to_port = 443; protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # 2. Bastion
@@ -271,54 +286,143 @@ resource "aws_lb_target_group" "heavy_tgs" {
 # --- LISTENER RULES ---
 # ... (Repetitive rules mapping - simplified for brevity, logic remains same)
 resource "aws_lb_listener_rule" "auth_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 10
-  action { type = "forward"; target_group_arn = aws_lb_target_group.access_tgs["auth"].arn }
-  condition { path_pattern { values = ["/api/auth*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 10
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.access_tgs["auth"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/auth*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "user_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 20
-  action { type = "forward"; target_group_arn = aws_lb_target_group.access_tgs["user"].arn }
-  condition { path_pattern { values = ["/api/users*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 20
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.access_tgs["user"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/users*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "work_cmd_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 30
-  action { type = "forward"; target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn }
-  condition { path_pattern { values = ["/api/workouts/command*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 30
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/workouts/command*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "work_qry_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 40
-  action { type = "forward"; target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn }
-  condition { path_pattern { values = ["/api/workouts/query*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 40
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/workouts/query*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "exercise_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 50
-  action { type = "forward"; target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn }
-  condition { path_pattern { values = ["/api/exercises*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 50
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/exercises*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "routine_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 60
-  action { type = "forward"; target_group_arn = aws_lb_target_group.core_tgs["routine"].arn }
-  condition { path_pattern { values = ["/api/routines*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 60
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.core_tgs["routine"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/routines*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "analytics_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 70
-  action { type = "forward"; target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn }
-  condition { path_pattern { values = ["/api/analytics*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 70
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/analytics*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "notify_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 80
-  action { type = "forward"; target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn }
-  condition { path_pattern { values = ["/api/notifications*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 80
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/notifications*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "video_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 90
-  action { type = "forward"; target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn }
-  condition { path_pattern { values = ["/api/videos*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 90
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/videos*"]
+    }
+  }
 }
+
 resource "aws_lb_listener_rule" "sync_rule" {
-  listener_arn = aws_lb_listener.http.arn; priority = 100
-  action { type = "forward"; target_group_arn = aws_lb_target_group.access_tgs["sync"].arn }
-  condition { path_pattern { values = ["/api/sync*"] } }
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 100
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.access_tgs["sync"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/sync*"]
+    }
+  }
 }
 
 # --- ECR & ECS ---
