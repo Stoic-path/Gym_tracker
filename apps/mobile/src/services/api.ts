@@ -1,11 +1,11 @@
-import axios from 'axios';
-import { API_URL } from '../constants/config';
-import { useAuthStore } from '../store/authStore';
+import axios from "axios";
+import { API_URL } from "../constants/config";
+import { useAuthStore } from "../store/authStore";
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -18,7 +18,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 export default api;
