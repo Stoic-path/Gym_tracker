@@ -1,14 +1,13 @@
 import os
 import django
-import uuid
 
 # Configurar Django fuera del entorno normal
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
 django.setup()
 
-from users.models import CustomUser
-from analytics.models import UserAnalytics
-from routines.models import Routine
+from users.models import CustomUser  # noqa: E402
+from analytics.models import UserAnalytics  # noqa: E402
+from routines.models import Routine  # noqa: E402
 
 
 # UUID DETERMINISTA PARA EL ADMIN (La Clave Maestra)
@@ -22,7 +21,7 @@ def seed_users():
         return
 
     print(f"🌱 Seeding Admin User with fixed UUID: {ADMIN_UUID}...")
-    user = CustomUser.objects.create_superuser(
+    CustomUser.objects.create_superuser(
         id=ADMIN_UUID,  # Forzamos el ID
         email="admin@gymtracker.com",
         password="adminpassword",
