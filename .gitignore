@@ -27,3 +27,5 @@ venv/
 
 estructura_proyecto.txt
 prioridadDesarrollo.txt
+*.sqlite3
+db.sqlite3

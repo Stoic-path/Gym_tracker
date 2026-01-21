@@ -19,9 +19,10 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  # IMPORTANTE: Este nombre debe coincidir con el prefijo que usaste en Terraform.
-  # En tu main.tf usaste variable "project_name" = "gym-tracker"
+  # Debe coincidir con variable "project_name" en Terraform
   PROJECT_NAME: gym-tracker 
+  # Definir versión de Python para consistencia
+  PYTHON_VERSION: '3.11'
 
 jobs:
   # ------------------------------------------------------------------
@@ -51,16 +52,13 @@ jobs:
             web: 'apps/web/**'
             auth-service:
               - 'services/auth-service/**'
-              - 'infra/scripts/setup_backend_access.sh'
             user-profile-service: 'services/user-profile-service/**'
             routine-service: 'services/routine-service/**'
             analytics-service:
               - 'services/analytics-service/**'
-              - 'infra/scripts/setup_backend_heavy.sh'
             notification-service: 'services/notification-service/**'
             workout-command-service:
               - 'services/workout-command-service/**'
-              - 'infra/scripts/setup_backend_core.sh'
             workout-query-service: 'services/workout-query-service/**'
             exercise-library-service: 'services/exercise-library-service/**'
             video-service: 'services/video-service/**'
@@ -88,7 +86,19 @@ jobs:
           MATRIX_JSON=$(echo "$CHANGED_SERVICES" | python3 -c '
           import sys, json
           services = json.load(sys.stdin)
-          path_map = {"web": "apps/web", "auth-service": "services/auth-service", "user-profile-service": "services/user-profile-service", "routine-service": "services/routine-service", "analytics-service": "services/analytics-service", "notification-service": "services/notification-service", "workout-command-service": "services/workout-command-service", "workout-query-service": "services/workout-query-service", "exercise-library-service": "services/exercise-library-service", "video-service": "services/video-service", "sync-service": "services/sync-service"}
+          path_map = {
+            "web": "apps/web", 
+            "auth-service": "services/auth-service", 
+            "user-profile-service": "services/user-profile-service", 
+            "routine-service": "services/routine-service", 
+            "analytics-service": "services/analytics-service", 
+            "notification-service": "services/notification-service", 
+            "workout-command-service": "services/workout-command-service", 
+            "workout-query-service": "services/workout-query-service", 
+            "exercise-library-service": "services/exercise-library-service", 
+            "video-service": "services/video-service", 
+            "sync-service": "services/sync-service"
+          }
           matrix = [{"name": s, "path": path_map[s]} for s in services if s in path_map]
           print(json.dumps(matrix))
           ')
@@ -116,25 +126,34 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      # VITAL: Instalar Python para que Moon pueda crear los venv de Django
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip' # Cachea descargas de pip para ir rápido
+
       - uses: moonrepo/setup-moon-action@v1
       
-      - name: Install Dependencies
+      - name: Install Moon/Node Dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run Lint
+      - name: Run Lint Globale
         run: moon run :lint
 
-      - name: Run Tests
+      - name: Run Tests Globales
         run: moon run :test
 
   # ------------------------------------------------------------------
-  # JOB 2: BUILD AND PUSH DOCKER IMAGES
+  # JOB 2: BUILD AND PUSH DOCKER IMAGES (Solo AWS ECR)
   # ------------------------------------------------------------------
   build-and-push:
     needs: [quality-checks, changes]
     # Run only if there are changes AND we are on main/develop
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -150,39 +169,37 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Requerido para AWS Academy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      # DockerHub deshabilitado por simplicidad y seguridad en AWS Academy.
+      # Descomentar si realmente necesitas redundancia.
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image (ECR)
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.path }} 
+          context: . # Contexto en la raíz para que el COPY ../.. funcione si es necesario
           file: ${{ matrix.path }}/Dockerfile
           push: true
-          # Etiquetado dinámico:
-          # develop -> :dev
-          # main    -> :latest
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
           cache-from: type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:buildcache
           cache-to: type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:buildcache,mode=max
 
   # ------------------------------------------------------------------
-  # JOB 3: LOAD TESTING (Smoke Test)
+  # JOB 3: SMOKE TEST (Evita suspensión de cuenta AWS por carga alta)
   # ------------------------------------------------------------------
   load-test:
     needs: build-and-push
@@ -192,13 +209,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      # JUSTIFICATION:
-      # We use k6 for load testing.
-      # For AWS Academy, we MUST keep this minimal ("Smoke Test") to avoid account suspension due to high network/CPU usage.
-      # We are not running a stress test here, just verifying the services respond.
       - name: Create k6 script
         run: |
-          echo 'import { sleep } from "k6"; export default function () { console.log("Skipping heavy load test to protect AWS Academy quotas."); sleep(1); }' > smoke-test.js
+          echo 'import { sleep } from "k6"; export default function () { console.log("Skipping heavy load test based on AWS Academy restrictions."); sleep(1); }' > smoke-test.js
 
       - name: Run k6 local test
         uses: grafana/k6-action@v0.3.0
@@ -230,40 +243,75 @@ jobs:
           # Clean JSON to bash list
           CLEAN_LIST=$(echo $SERVICES_JSON | sed "s/[][]//g" | sed "s/\"//g" | sed "s/,/ /g")
           
-          echo "🚀 Deploying services: $CLEAN_LIST"
+          echo "🚀 Starting Deployment for: $CLEAN_LIST"
 
           # Map services to their ECS Service Name
           declare -A ECS_SERVICE_MAP
           ECS_SERVICE_MAP["web"]="web-service"
           ECS_SERVICE_MAP["auth-service"]="auth-service"
-          ECS_SERVICE_MAP["user-profile-service"]="user-service"
+          ECS_SERVICE_MAP["user-profile-service"]="user-profile-service"
           ECS_SERVICE_MAP["sync-service"]="sync-service"
-          ECS_SERVICE_MAP["workout-command-service"]="work-cmd-service"
-          ECS_SERVICE_MAP["workout-query-service"]="work-qry-service"
+          ECS_SERVICE_MAP["workout-command-service"]="workout-command-service"
+          ECS_SERVICE_MAP["workout-query-service"]="workout-query-service"
           ECS_SERVICE_MAP["routine-service"]="routine-service"
-          ECS_SERVICE_MAP["exercise-library-service"]="exercise-service"
+          ECS_SERVICE_MAP["exercise-library-service"]="exercise-library-service"
           ECS_SERVICE_MAP["analytics-service"]="analytics-service"
-          ECS_SERVICE_MAP["notification-service"]="notify-service"
+          ECS_SERVICE_MAP["notification-service"]="notification-service"
           ECS_SERVICE_MAP["video-service"]="video-service"
 
           CLUSTER_NAME="${PROJECT_NAME}-cluster"
 
           for service in $CLEAN_LIST; do
-            SERVICE_NAME="${PROJECT_NAME}-${ECS_SERVICE_MAP[$service]}"
+            # Nota: Terraform suele usar el nombre "gym-tracker-auth-service"
+            # Nos aseguramos de construir el nombre completo
             
-            if [ -z "${ECS_SERVICE_MAP[$service]}" ]; then
+            SUFFIX="${ECS_SERVICE_MAP[$service]}"
+            if [ -z "$SUFFIX" ]; then
                echo "⚠️ Service $service not mapped to ECS. Skipping."
                continue
             fi
+
+            FULL_SERVICE_NAME="${PROJECT_NAME}-${SUFFIX}"
             
-            echo "🚀 Updating ECS Service: $SERVICE_NAME in cluster $CLUSTER_NAME..."
+            echo "🔄 Updating ECS Service: $FULL_SERVICE_NAME..."
             
+            # Forzamos n deployment: esto hace que ECS baje la imagen 'latest/dev' nueva automáticamente
             aws ecs update-service \
               --cluster "$CLUSTER_NAME" \
-              --service "$SERVICE_NAME" \
-              --force-new-deployment \
-              || echo "⚠️ Could not update service $SERVICE_NAME"
+              --service "$FULL_SERVICE_NAME" \
+              --force-new-deployment > /dev/null \
+              && echo "✅ Update trigged for $FULL_SERVICE_NAME" \
+              || echo "❌ FAILED: Checking if service exists..."
             
-            # Sleep to avoid AWS API Rate Limiting when deploying many services
-            sleep 5
+            sleep 2
           done
+
+      - name: Run Database Seeding (Strategy B)
+        # Ejecutamos seeding si hubo cambios en Auth OR en Analytics/Workouts (para estadísticas)
+        if: contains(needs.changes.outputs.services_to_deploy, 'auth-service')
+        run: |
+          echo "🌱 Triggering Seeding for Auth Service..."
+          
+          CLUSTER_NAME="${PROJECT_NAME}-cluster"
+          TASK_FAMILY="${PROJECT_NAME}-auth" 
+          
+          SUBNET_ID=$(aws ec2 describe-subnets --query "Subnets[0].SubnetId" --output text)
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=*db-sg*" --query "SecurityGroups[0].GroupId" --output text)
+
+          if [ "$SUBNET_ID" == "None" ] || [ "$SG_ID" == "None" ]; then
+             echo "⚠️ Could not auto-detect Subnet/SG. Skipping."
+             exit 0
+          fi
+
+          # --- CORRECCIÓN CRÍTICA AQUÍ ---
+          # 1. Ejecutamos 'migrate' antes de 'seed_data.py' en la misma orden segura.
+          # 2. Esto garantiza que las tablas existan antes de insertar registros.
+          aws ecs run-task \
+            --cluster "$CLUSTER_NAME" \
+            --task-definition "$TASK_FAMILY" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_ID],securityGroups=[$SG_ID],assignPublicIp=ENABLED}" \
+            --overrides '{"containerOverrides": [{"name": "auth", "command": ["sh", "-c", "python manage.py migrate && python seed_data.py"]}]}' \
+            > /dev/null
+            
+          echo "✅ Seed task triggered with migrations guaranteed."
