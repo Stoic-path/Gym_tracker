@@ -13,10 +13,9 @@ tasks:
     command: 'npx expo run:android'
     local: true
 
-  # Run on iOS simulator (moon run mobile:ios)
-  ios:
-    command: 'npx expo run:ios'
-    local: true
+  # Run lint (moon run mobile:lint)
+  lint:
+    command: 'npx expo lint'
 
   # Linting (moon run mobile:lint)
   lint:

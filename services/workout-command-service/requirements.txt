@@ -3,6 +3,8 @@ Django==3.2.25
 djangorestframework
 django-cors-headers
 python-dotenv>=1.0.0
+# Necesario para DRF 3.14+
+djangorestframework-simplejwt
 
 # Database Driver (MongoDB Native)
 djongo==1.3.6
