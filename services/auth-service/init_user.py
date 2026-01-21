@@ -2,15 +2,19 @@ import os
 import django
 
 # Setup Django Environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
+
 django.setup()
 
-from django.contrib.auth import get_user_model
+
+from django.contrib.auth import get_user_model  # noqa: E402
+from users.models import UserCustom  # noqa: E402,F401
+
 
 def create_admin():
     User = get_user_model()
-    email = 'admin@example.com'
-    password = 'admin123'
+    email = "admin@example.com"
+    password = "admin123"
 
     if not User.objects.filter(email=email).exists():
         print(f"Creating superuser: {email}")
@@ -22,5 +26,6 @@ def create_admin():
     else:
         print("Superuser already exists.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     create_admin()

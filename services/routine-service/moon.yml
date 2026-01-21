@@ -1,24 +1,24 @@
-﻿language: 'python'
+﻿language: python
+platform: python  # <--- AGREGA ESTO SI FALTA
 
-type: 'application'
-
-toolchain:
-  python:
-    version: '3.13.11'
+type: application
 
 tasks:
   # Local development task (moon run routine-service:dev)
   dev:
     command: 'python manage.py runserver 0.0.0.0:8000'
     local: true
-    platform: 'system'
+    
 
   # Linting task (moon run :lint)
   lint:
     command: 'python manage.py check'
-    platform: 'system'
+    inputs:
+      - '**/*.py'
+      - 'requirements.txt'
+    
 
   # Testing task (moon run :test)
   test:
     command: 'python manage.py test'
-    platform: 'system'
+    

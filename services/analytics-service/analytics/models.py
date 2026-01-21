@@ -1,4 +1,4 @@
-﻿﻿from django.db import models
+﻿from django.db import models
 
 class UserAnalytics(models.Model):
     # Usamos el mismo UUID que en Auth/Profile/Mongo para integridad lógica

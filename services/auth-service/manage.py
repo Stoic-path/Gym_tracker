@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
+
 import os
 import sys
 
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+    # ⚠️ CAMBIO CRÍTICO AQUÍ:
+    # Antes decía 'auth_service.settings', ahora DEBE decir 'app.settings'
+    # porque tu carpeta de configuración se llama 'app'.
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -18,5 +23,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

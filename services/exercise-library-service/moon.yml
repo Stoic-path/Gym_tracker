@@ -1,24 +1,21 @@
-﻿language: 'python'
+﻿language: python
+platform: python
 
-type: 'application'
-
-toolchain:
-  python:
-    version: '3.13.11'
+type: application
 
 tasks:
-  # Local development task (moon run exercise-library-service:dev)
-  dev:
-    command: 'python manage.py runserver 0.0.0.0:8000'
+  dev:  # CAMBIADO de 'run' a 'dev' para estandarizar
+    command: 'python manage.py runserver 0.0.0.0:8004'
     local: true
-    platform: 'system'
 
-  # Linting task (moon run :lint)
   lint:
     command: 'python manage.py check'
-    platform: 'system'
+    inputs:
+      - '**/*.py'
+      - 'requirements.txt'
 
-  # Testing task (moon run :test)
-  test:
+  test: # AGREGADO para estandarizar
     command: 'python manage.py test'
-    platform: 'system'
+    inputs:
+      - '**/*.py'
+      - 'requirements.txt'

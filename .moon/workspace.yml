@@ -1,5 +1,5 @@
 # https://moonrepo.dev/docs/config/workspace
-$schema: './cache/schemas/workspace.json'
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
 
 # extends: './shared/workspace.yml'
 
@@ -13,3 +13,5 @@ vcs:
   manager: 'git'
   provider: 'github'
   defaultBranch: 'main'  
+
+

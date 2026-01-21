@@ -1,7 +1,11 @@
 # .moon/toolchain.yml
+
+$schema: 'https://moonrepo.dev/schemas/toolchain.json'
+
 node:
-  version: '24.12.0' #LTS
+  version: '24.12.0' 
   packageManager: 'pnpm'
 
 python:
-  version: '3.13.11' # Muy importante para mis servicios Django
+  version: '3.11.9'
+    

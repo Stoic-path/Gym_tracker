@@ -1,0 +1,11 @@
+# filepath: services/auth-service/.flake8
+[flake8]
+# Excluir carpetas de migraciones (autogeneradas), caché y archivos de config
+exclude = 
+    migrations,
+    __pycache__,
+    .venv,
+    manage.py,
+    settings.py
+# Aumentar longitud de línea a 120 (el estándar de 79 es muy corto para Django)
+max-line-length = 120

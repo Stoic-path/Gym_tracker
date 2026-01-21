@@ -1,0 +1,16 @@
+$schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+tasks:
+  lint:
+    command: 'python manage.py check'
+    platform: 'python'
+    inputs:
+      - 'src/**/*'
+      - '**/*.py'
+  
+  test:
+    command: 'python manage.py test'
+    platform: 'python'
+    inputs:
+      - 'src/**/*'
+      - '**/*.py'

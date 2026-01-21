@@ -1,24 +1,14 @@
-﻿language: 'python'
-
-type: 'application'
-
-toolchain:
-  python:
-    version: '3.13.11'
+﻿language: python
+platform: python
+type: application
 
 tasks:
-  # Local development task (moon run sync-service:dev)
   dev:
-    command: 'python manage.py runserver 0.0.0.0:8000'
+    command: 'python manage.py runserver 0.0.0.0:8006' # Puerto 8006
     local: true
-    platform: 'system'
-
-  # Linting task (moon run :lint)
   lint:
     command: 'python manage.py check'
-    platform: 'system'
-
-  # Testing task (moon run :test)
+    inputs: ['**/*.py', 'requirements.txt']
   test:
     command: 'python manage.py test'
-    platform: 'system'
+    inputs: ['**/*.py', 'requirements.txt']
