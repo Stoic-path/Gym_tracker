@@ -1,0 +1,23 @@
+type: 'application'
+language: 'javascript'
+platform: 'node'
+
+tasks:
+  # Start the Expo development server (moon run mobile:start)
+  start:
+    command: 'npx expo start'
+    local: true
+
+  # Run on Android emulator (moon run mobile:android)
+  android:
+    command: 'npx expo run:android'
+    local: true
+
+  # Run on iOS simulator (moon run mobile:ios)
+  ios:
+    command: 'npx expo run:ios'
+    local: true
+
+  # Linting (moon run mobile:lint)
+  lint:
+    command: 'eslint .'
