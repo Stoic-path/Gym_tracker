@@ -8,7 +8,14 @@ tasks:
   dev:
     command: 'python manage.py runserver 0.0.0.0:8000'
     local: true
-    
+  makemigrations:
+    command: 'python manage.py makemigrations routines'
+    platform: python
+  install:
+    command: 'pip install -r requirements.txt'
+    inputs:
+      - 'requirements.txt'
+    platform: python
 
   # Linting task (moon run :lint)
   lint:

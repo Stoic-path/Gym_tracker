@@ -24,5 +24,8 @@ COPY . .
 # Expose standard port (internal to container)
 EXPOSE 8000
 
-# Default command on startup
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Make start script executable
+RUN chmod +x start.sh
+
+# Default command on startup (Using start.sh for migrations/seeding)
+CMD ["./start.sh"]

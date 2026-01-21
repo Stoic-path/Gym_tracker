@@ -3,6 +3,7 @@ URL configuration for app project.
 """
 from django.contrib import admin
 from django.urls import path
+from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -29,7 +30,11 @@ class WorkoutHistoryView(APIView):
         except Exception as e:
             return Response({"error": "Mongo Connection Failed", "details": str(e)}, status=500)
 
+def health_check(request):
+    return HttpResponse("OK", status=200)
+
 urlpatterns = [
+    path('', health_check),
     path("admin/", admin.site.urls),
     path("api/workouts/query/history", WorkoutHistoryView.as_view()),
 ]

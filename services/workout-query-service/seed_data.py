@@ -3,6 +3,8 @@ import pymongo
 import random
 from datetime import datetime, timedelta
 import uuid
+import django
+import datetime
 
 # Configuración de conexión (Igual que settings.py)
 MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
@@ -13,6 +15,13 @@ MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'workout_query_db')
 MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
 
 EXERCISES_LIST = ["Squat", "Bench Press", "Deadlift", "Overhead Press", "Pull Up", "Dips", "Lunges"]
+
+# Asumimos que tienes modelos o usas PyMongo directo. 
+# Si usas Djongo/Models, adáptalo. Aquí un ejemplo genérico:
+from queries.models import WorkoutHistory # Ajusta según tu modelo real
+
+# EL MISMO UUID DETERMINISTA
+ADMIN_UUID = "00000000-0000-0000-0000-000000000001"
 
 def seed():
     try:
@@ -44,8 +53,26 @@ def seed():
         collection.insert_many(workouts)
         print("✅ [Seed] Workout Query: Carga completa.")
 
+        # Verificar si ya existe alguna rutina de este usuario
+        if WorkoutHistory.objects.filter(user_id=ADMIN_UUID).exists():
+            print("⚠️  Workouts for Admin already exist.")
+            return
+
+        print(f"🌱 Seeding mongo Workouts for UUID {ADMIN_UUID}...")
+        
+        WorkoutHistory.objects.create(
+            user_id=ADMIN_UUID, # ENLACE CRÍTICO
+            workout_name="Full Body Intro",
+            date=datetime.date.today(),
+            duration_minutes=45,
+            calories_burned=300
+        )
+        print("✅ MongoDB Workouts seeded.")
+
     except Exception as e:
         print(f"❌ [Seed] Error conectando a Mongo: {e}")
 
 if __name__ == '__main__':
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
+    django.setup()
     seed()

@@ -6,6 +6,14 @@ tasks:
   dev:
     command: 'python manage.py runserver 0.0.0.0:8005' # Puerto 8005
     local: true
+  makemigrations:
+    command: 'python manage.py makemigrations'
+    platform: python
+  install:
+    command: 'pip install -r requirements.txt'
+    inputs:
+      - 'requirements.txt'
+    platform: python
   lint:
     command: 'python manage.py check'
     inputs: ['**/*.py', 'requirements.txt']

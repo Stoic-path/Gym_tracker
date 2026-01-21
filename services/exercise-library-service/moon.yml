@@ -7,6 +7,14 @@ tasks:
   dev:  # CAMBIADO de 'run' a 'dev' para estandarizar
     command: 'python manage.py runserver 0.0.0.0:8004'
     local: true
+  makemigrations:
+    command: 'python manage.py makemigrations exercises'
+    platform: python
+  install:
+    command: 'pip install -r requirements.txt'
+    inputs:
+      - 'requirements.txt'
+    platform: python
 
   lint:
     command: 'python manage.py check'

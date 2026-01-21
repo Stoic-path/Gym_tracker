@@ -6,6 +6,10 @@ tasks:
   dev:
     command: 'python manage.py runserver 0.0.0.0:8002' # Puerto 8002
     local: true
+  makemigrations:
+    command: 'python manage.py makemigrations'
+    options:
+      mergeArgs: 'append'
   lint:
     command: 'python manage.py check'
     inputs: ['**/*.py', 'requirements.txt']

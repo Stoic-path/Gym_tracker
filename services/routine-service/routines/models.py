@@ -2,15 +2,16 @@
 import uuid
 
 class Routine(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    # El ID del usuario viene del token JWT (Auth Service)
-    user_id = models.UUIDField(help_text="ID del usuario propietario")
-    name = models.CharField(max_length=100, default="Mi Rutina")
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) # ID de la rutina (propio)
+    
+    # REFERENCIA AL USUARIO (NO es PK, NO tiene default)
+    user_id = models.UUIDField(editable=False, db_index=True)
+    
+    name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} - {self.user_id}"
+        return f"{self.name} by {self.user_id}"
 
 class RoutineGroup(models.Model):
     """

@@ -15,8 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.http import HttpResponse
+
+def health_check(request):
+    return HttpResponse("OK", status=200)
 
 urlpatterns = [
+    path('', health_check),
     path('admin/', admin.site.urls),
+    # Prefijo api/workouts/command/ definido en tu Load Balancer (main.tf)
+    path('api/workouts/command/', include('workouts.urls')),
 ]

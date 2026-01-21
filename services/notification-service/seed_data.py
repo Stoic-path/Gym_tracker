@@ -1,9 +1,20 @@
 import os
 import redis
 import random
+import django
 
+# Configuración de Redis
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+
+# Configuración de Django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
+django.setup()
+
+# Ajusta el import según tu estructura real
+from app.models import NotificationSettings 
+
+ADMIN_UUID = "00000000-0000-0000-0000-000000000001"
 
 def seed():
     try:
@@ -25,5 +36,14 @@ def seed():
     except Exception as e:
         print(f"❌ [Seed] Error conectando a Redis: {e}")
 
+def seed_notification_settings():
+    if not NotificationSettings.objects.filter(user_id=ADMIN_UUID).exists():
+        print(f"🌱 Seeding Notification Settings for {ADMIN_UUID}...")
+        NotificationSettings.objects.create(
+            user_id=ADMIN_UUID,
+            email_enabled=True
+        )
+
 if __name__ == '__main__':
     seed()
+    seed_notification_settings()
