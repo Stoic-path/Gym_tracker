@@ -17,6 +17,3 @@ tasks:
   lint:
     command: 'npx expo lint'
 
-  # Linting (moon run mobile:lint)
-  lint:
-    command: 'eslint .'
