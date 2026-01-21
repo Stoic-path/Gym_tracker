@@ -1,6 +1,6 @@
 # switch_account_v3.ps1
 Clear-Host
-Write-Host "--- PROTOCOLO DE MIGRACION DE CUENTA AWS (DEVELOP) ---" -ForegroundColor Cyan
+Write-Host "--- PROTOCOLO DE MIGRACION DE CUENTA AWS (PRODUCTION/MAIN) ---" -ForegroundColor Cyan
 
 # 1. Solicitar Credenciales
 $AccessKey = Read-Host "Paso 1: Pega tu nuevo AWS_ACCESS_KEY_ID"
@@ -26,7 +26,7 @@ aws configure set aws_session_token $SessionToken
 aws configure set default.region "us-east-1"
 
 # 4. Borrar Estado Anterior de Terraform
-Write-Host " Limpiando estado corrupto de Terraform en Develop..."
+Write-Host " Limpiando estado corrupto de Terraform en Main..."
 if (Test-Path .terraform) { Remove-Item -Recurse -Force .terraform }
 if (Test-Path .terraform.lock.hcl) { Remove-Item -Force .terraform.lock.hcl }
 if (Test-Path terraform.tfstate) { Remove-Item -Force terraform.tfstate }

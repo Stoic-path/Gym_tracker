@@ -151,6 +151,10 @@ jobs:
     # Run only if there are changes AND we are on main/develop
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    
+    # DYNAMIC ENVIRONMENT SELECTION
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    
     permissions:
       contents: read
       packages: write
@@ -226,6 +230,10 @@ jobs:
     # Ejecutar en main O develop
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    
+    # DYNAMIC ENVIRONMENT SELECTION
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
