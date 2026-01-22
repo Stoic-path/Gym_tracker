@@ -36,6 +36,8 @@ DEBUG = True
 # En producción real se pondría el dominio específico, pero en Academy esto evita errores.
 ALLOWED_HOSTS = ["*"]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
