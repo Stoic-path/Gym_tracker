@@ -203,7 +203,9 @@ jobs:
       - name: Build and Push Docker Image (ECR)
         uses: docker/build-push-action@v5
         with:
-          context: . # Contexto en la raíz para que el COPY ../.. funcione si es necesario
+          # CAMBIO IMPORTANTE: Usamos el directorio del servicio como contexto.
+          # Esto permite que "COPY requirements.txt ." funcione correctamente.
+          context: ${{ matrix.path }}
           file: ${{ matrix.path }}/Dockerfile
           push: true
           # Inyectamos la URL del ALB como Build Arg.
