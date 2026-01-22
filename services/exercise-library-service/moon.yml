@@ -5,7 +5,7 @@ type: application
 
 tasks:
   dev:  # CAMBIADO de 'run' a 'dev' para estandarizar
-    command: 'python manage.py runserver 0.0.0.0:8004'
+    command: 'python manage.py runserver 0.0.0.0:8006'
     local: true
   makemigrations:
     command: 'python manage.py makemigrations exercises'

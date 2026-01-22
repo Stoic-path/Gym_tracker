@@ -5,14 +5,11 @@ language: 'unknown'
 
 tasks:
   
-  test:
-    command: 'python manage.py test'
-    inputs:
-      - '**/*.py'
-      - 'requirements.txt'
+  # Removed broken 'test' task that tried to run manage.py in root.
+  # Root tasks should only be generic repo tasks.
 
   format:
-    command: 'black . && isort .' 
+    command: 'echo "Manual check: verify black/isort installed before running" && black . && isort .' 
     inputs:
       - '**/*.py'
     options:

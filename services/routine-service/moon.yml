@@ -6,7 +6,7 @@ type: application
 tasks:
   # Local development task (moon run routine-service:dev)
   dev:
-    command: 'python manage.py runserver 0.0.0.0:8000'
+    command: 'python manage.py runserver 0.0.0.0:8005'
     local: true
   makemigrations:
     command: 'python manage.py makemigrations routines'

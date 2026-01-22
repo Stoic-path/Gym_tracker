@@ -4,7 +4,7 @@ type: application
 
 tasks:
   dev:
-    command: 'python manage.py runserver 0.0.0.0:8002' # Puerto 8002
+    command: 'python manage.py runserver 0.0.0.0:8003' # Puerto 8003
     local: true
   makemigrations:
     command: 'python manage.py makemigrations'

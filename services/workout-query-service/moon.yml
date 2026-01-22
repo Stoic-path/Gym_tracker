@@ -4,7 +4,7 @@ type: application
 
 tasks:
   dev:
-    command: 'python manage.py runserver 0.0.0.0:8001' # Puerto 8001
+    command: 'python manage.py runserver 0.0.0.0:8004' # Puerto 8004
     local: true
   lint:
     command: 'python manage.py check'
