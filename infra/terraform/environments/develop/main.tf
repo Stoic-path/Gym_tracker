@@ -507,7 +507,10 @@ resource "aws_ecr_repository" "services" {
 
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
-  setting { name  = "containerInsights"; value = "enabled" }
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
