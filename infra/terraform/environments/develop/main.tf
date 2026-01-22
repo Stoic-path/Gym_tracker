@@ -108,16 +108,36 @@ resource "aws_security_group" "alb_sg" {
 resource "aws_security_group" "bastion_sg" {
   name        = "${var.project_name}-bastion-sg"
   vpc_id      = aws_vpc.main.id
-  ingress { from_port = 22; to_port = 22; protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # 3. ECS Apps (ALB -> Apps)
 resource "aws_security_group" "app_sg" {
   name        = "${var.project_name}-app-sg"
   vpc_id      = aws_vpc.main.id
-  ingress { from_port = 0; to_port = 65535; protocol = "tcp"; security_groups = [aws_security_group.alb_sg.id] }
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # 4. Database Central (Apps -> DB)
@@ -125,15 +145,45 @@ resource "aws_security_group" "db_sg" {
   name        = "${var.project_name}-db-sg"
   vpc_id      = aws_vpc.main.id
   # Apps access
-  ingress { from_port = 5432; to_port = 5432; protocol = "tcp"; security_groups = [aws_security_group.app_sg.id] }
-  ingress { from_port = 27017; to_port = 27017; protocol = "tcp"; security_groups = [aws_security_group.app_sg.id] }
-  ingress { from_port = 6379; to_port = 6379; protocol = "tcp"; security_groups = [aws_security_group.app_sg.id] }
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  ingress {
+    from_port       = 27017
+    to_port         = 27017
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
   # Bastion access
-  ingress { from_port = 22; to_port = 22; protocol = "tcp"; security_groups = [aws_security_group.bastion_sg.id] }
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
   # Auto-referencia para comunicación entre contenedores si usan red host (no en este caso, pero buena practica)
-  ingress { from_port = 0; to_port = 0; protocol = "-1"; self = true }
-  
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # --- INSTANCES ---
