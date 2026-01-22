@@ -542,6 +542,7 @@ resource "aws_ecs_service" "web" {
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener.http]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -586,6 +587,7 @@ resource "aws_ecs_service" "auth" {
   task_definition = aws_ecs_task_definition.auth.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.auth_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -631,6 +633,7 @@ resource "aws_ecs_service" "user" {
   task_definition = aws_ecs_task_definition.user.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.user_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -667,6 +670,7 @@ resource "aws_ecs_service" "sync" {
   task_definition = aws_ecs_task_definition.sync.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.sync_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -710,6 +714,7 @@ resource "aws_ecs_service" "work_cmd" {
   task_definition = aws_ecs_task_definition.work_cmd.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.work_cmd_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -752,6 +757,7 @@ resource "aws_ecs_service" "work_qry" {
   task_definition = aws_ecs_task_definition.work_qry.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.work_qry_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -791,6 +797,7 @@ resource "aws_ecs_service" "routine" {
   task_definition = aws_ecs_task_definition.routine.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.routine_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -832,6 +839,7 @@ resource "aws_ecs_service" "exercise" {
   task_definition = aws_ecs_task_definition.exercise.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.exercise_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -868,6 +876,7 @@ resource "aws_ecs_service" "video" {
   task_definition = aws_ecs_task_definition.video.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.video_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -911,6 +920,7 @@ resource "aws_ecs_service" "analytics" {
   task_definition = aws_ecs_task_definition.analytics.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.analytics_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
@@ -946,6 +956,7 @@ resource "aws_ecs_service" "notify" {
   task_definition = aws_ecs_task_definition.notify.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  depends_on      = [aws_lb_listener_rule.notify_rule]
 
   network_configuration {
     subnets         = [aws_subnet.private_1.id]
