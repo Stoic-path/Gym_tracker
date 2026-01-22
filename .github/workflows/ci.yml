@@ -140,6 +140,12 @@ jobs:
       - name: Install Moon/Node Dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Install Python Dependencies (Global for tests)
+        run: |
+          # Iterar sobre todos los requirements.txt en services/ y apps/
+          # para asegurar que Moon pueda correr los tests/linters
+          find services apps -name "requirements.txt" -exec pip install -r {} \;
+
       - name: Run Lint Globale
         run: moon run :lint
 
