@@ -1,0 +1,31 @@
+
+# moon
+.moon/cache
+.moon/docker
+
+# Node
+node_modules
+dist
+
+# Python
+__pycache__
+*.py[cod]
+venv/
+.venv/
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+
+# OS
+.DS_Store
+*.pem
+
+estructura_proyecto.txt
+prioridadDesarrollo.txt
+*.sqlite3
+db.sqlite3

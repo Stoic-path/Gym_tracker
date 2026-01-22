@@ -1,0 +1,16 @@
+$schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+fileGroups:
+  configs:
+    - '*.config.js'
+    - 'package.json'
+    - 'tsconfig.json'
+    - 'pyproject.toml'
+    - 'requirements.txt'
+  sources:
+    - 'src/**/*'
+    - 'apps/**/*'
+    - 'services/**/*'
+    - '**/*.py'
+
+tasks: {}

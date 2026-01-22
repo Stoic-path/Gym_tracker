@@ -1,0 +1,16 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+type: 'application'
+language: 'unknown'
+
+tasks:
+  
+  # Removed broken 'test' task that tried to run manage.py in root.
+  # Root tasks should only be generic repo tasks.
+
+  format:
+    command: 'echo "Manual check: verify black/isort installed before running" && black . && isort .' 
+    inputs:
+      - '**/*.py'
+    options:
+      affectedFilesOnly: true 

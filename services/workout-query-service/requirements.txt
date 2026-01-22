@@ -1,0 +1,19 @@
+﻿# Framework Core
+Django==4.2.9
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.0
+python-dotenv>=1.0.0
+
+# Database Driver (MongoDB Native)
+pymongo>=4.6.0
+
+# Server (Production)
+gunicorn>=21.2.0
+
+# Caching/Redis
+django-redis>=5.3.0
+redis>=5.0.0
+
+# --- ELIMINADOS/NO NECESARIOS ---
+# sqlparse: (Ya no hace falta fijarlo manualmente)
+# djongo: (Eliminado por conflictos)

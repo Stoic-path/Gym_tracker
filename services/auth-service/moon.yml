@@ -1,0 +1,50 @@
+﻿language: python
+platform: python
+type: application
+tags: ['django']
+
+tasks:
+  dev:
+    command: 'python manage.py runserver 0.0.0.0:8001'
+    local: true
+
+  lint:
+    # Mantenemos el comando base 'python' para respetar la plataforma
+    command: 'python'
+    
+    # Argumentos específicos para usar el linter flake8 (que ya instalamos)
+    args:
+      - '-m'
+      - 'flake8'
+      
+    # Definimos los inputs que vigila la tarea
+    inputs:
+      - 'app/**/*.py'
+      - 'users/**/*.py'
+      
+    # ⚠️ ESTA ES LA CLAVE:
+    # Le decimos a Moon: "Ignora los args heredados (manage.py check) y usa SOLO los que definí aquí".
+    options:
+      mergeArgs: 'replace'
+
+  test:
+    # Usamos 'python' como comando base
+    command: 'python'
+    
+    # Pasamos los argumentos como una lista explícita
+    args:
+      - 'manage.py'
+      - 'test'
+      - 'users'  # Testeamos solo la app 'users'
+    
+    # Definimos qué archivos vigilar
+    inputs:
+      - 'app/**/*.py'
+      - 'users/**/*.py'
+    
+    # ESTO ES LO IMPORTANTE:
+    # 'replace' asegura que Moon NO agregue nada más al final del comando.
+    options:
+      mergeArgs: 'replace'
+
+

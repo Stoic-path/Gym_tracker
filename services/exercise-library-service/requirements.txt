@@ -1,0 +1,8 @@
+﻿Django==3.2.25
+djangorestframework
+django-cors-headers
+boto3>=1.34.0
+djongo
+pymongo==3.13.0
+djangorestframework-simplejwt
+django-redis

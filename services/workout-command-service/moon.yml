@@ -1,0 +1,18 @@
+﻿language: python
+platform: python
+type: application
+
+tasks:
+  dev:
+    command: 'python manage.py runserver 0.0.0.0:8003' # Puerto 8003
+    local: true
+  makemigrations:
+    command: 'python manage.py makemigrations'
+    options:
+      mergeArgs: 'append'
+  lint:
+    command: 'python manage.py check'
+    inputs: ['**/*.py', 'requirements.txt']
+  test:
+    command: 'python manage.py test'
+    inputs: ['**/*.py', 'requirements.txt']

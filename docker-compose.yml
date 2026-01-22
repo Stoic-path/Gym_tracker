@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # --- DATA INFRASTRUCTURE (Simulating your future EC2 instances) ---
+  
+  # Relational Database (Shared for Auth, Profile, Routine)
+  postgres:
+    image: postgres:15-alpine
+    container_name: gym-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-gym_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gym_password_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-gym_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gym_user -d gym_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # NoSQL Database (For Workout Command/Query and Analytics)
+  mongo:
+    image: mongo:6.0
+    container_name: gym-mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-gym_mongo_user}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-gym_mongo_pass_dev}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Cache and Message Queues (For Sync and Auth)
+  redis:
+    image: redis:7-alpine
+    container_name: gym-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # --- APPLICATIONS (FRONTEND) ---
+  web:
+    build: apps/web
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+
+  # --- BACKEND MICROSERVICES ---
+  # Note: Not yet connected to new DBs, will configure in settings.py
+  
+  auth-service:
+    build: services/auth-service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./services/auth-service:/app  # <--- HOT RELOAD LINE
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+      - REDIS_URL=redis://redis:6379/1  # Using database 1 for Auth
+      - REDIS_HOST=redis
+      
+  user-profile-service:
+    build: services/user-profile-service
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./services/user-profile-service:/app
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+      - REDIS_HOST=redis
+
+  workout-command-service:
+    build: services/workout-command-service
+    ports:
+      - "8003:8000"
+    depends_on:
+      - mongo
+    environment:
+      # Formato: mongodb://usuario:password@host:puerto
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+      - REDIS_HOST=redis
+
+  workout-query-service:
+    build: services/workout-query-service
+    ports:
+      - "8004:8000"
+    depends_on:
+      - mongo
+    volumes:
+      - ./services/workout-query-service:/app
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
+      - REDIS_HOST=redis
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  routine-service:
+    build: services/routine-service
+    ports:
+      - "8005:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+      - REDIS_HOST=redis
+
+  exercise-library-service:
+    build: services/exercise-library-service
+    ports:
+      - "8006:8000"
+    depends_on:
+      - mongo
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
+      - REDIS_HOST=redis
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  video-service:
+    build: services/video-service
+    ports:
+      - "8007:8000"
+    environment:
+      - REDIS_HOST=redis
+      - MONGO_URI=mongodb://gym_mongo_user:gym_mongo_pass@mongo:27017
+
+  notification-service:
+    build: services/notification-service
+    ports:
+      - "8008:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/3  # Using database 3 for Notifications
+      - REDIS_HOST=redis
+
+  sync-service:
+    build: services/sync-service
+    ports:
+      - "8009:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/2  # Using database 2 for Sync
+      - REDIS_HOST=redis
+
+  analytics-service:
+    build: services/analytics-service
+    ports:
+      - "8010:8000"
+    depends_on:
+      - postgres
+      - mongo
+    volumes:
+      - ./services/analytics-service:/app
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-r*mu_0=s_ql#b$x#yncu+jed7xj#u3swsclj+m2==pwi5*t652
+      - DATABASE_URL=postgres://gym_user:gym_password@postgres:5432/gym_db
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
