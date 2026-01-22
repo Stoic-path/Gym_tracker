@@ -9,9 +9,9 @@ services:
     container_name: gym-postgres
     restart: always
     environment:
-      - POSTGRES_USER=gym_user
-      - POSTGRES_PASSWORD=gym_password
-      - POSTGRES_DB=gym_db
+      - POSTGRES_USER=${POSTGRES_USER:-gym_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gym_password_dev}
+      - POSTGRES_DB=${POSTGRES_DB:-gym_db}
     ports:
       - "5432:5432"
     volumes:
@@ -28,8 +28,8 @@ services:
     container_name: gym-mongo
     restart: always
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=gym_mongo_user
-      - MONGO_INITDB_ROOT_PASSWORD=gym_mongo_pass
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-gym_mongo_user}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-gym_mongo_pass_dev}
     ports:
       - "27017:27017"
     volumes:

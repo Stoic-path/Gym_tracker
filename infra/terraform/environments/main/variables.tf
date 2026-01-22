@@ -59,7 +59,7 @@ variable "tg_heavy_group" {
 }
 
 variable "django_secret_key" {
-  description = "Shared Secret Key for Django Microservices to ensure JWT compatibility"
+  description = "Shared Secret Key for Django Microservices to ensure JWT compatibility. Must be provided via variables or tfvars."
   type        = string
-  default     = "django-insecure-shared-secret-key-for-dev-environment-12345"
+  sensitive   = true
 }
