@@ -15,4 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8006"]
+COPY start.sh .
+RUN chmod +x start.sh
+
+EXPOSE 8006
+
+CMD ["./start.sh"]
