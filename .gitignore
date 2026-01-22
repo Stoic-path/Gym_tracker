@@ -25,6 +25,9 @@ venv/
 .DS_Store
 *.pem
 
+# IDE
+.vscode/
+
 estructura_proyecto.txt
 prioridadDesarrollo.txt
 *.sqlite3
