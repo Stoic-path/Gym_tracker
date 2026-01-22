@@ -132,7 +132,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip' # Cachea descargas de pip para ir rápido
 
-      - uses: moonrepo/setup-moon-action@v1
+      # Reemplazo de acción deprecada por la oficial recomendada
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
       
       - name: Install Moon/Node Dependencies
         run: pnpm install --no-frozen-lockfile
