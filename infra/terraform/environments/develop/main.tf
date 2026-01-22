@@ -301,7 +301,10 @@ resource "aws_lb_target_group" "web" {
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "ip"
-  health_check { path = "/"; matcher = "200-499" }
+  health_check {
+    path    = "/"
+    matcher = "200-499"
+  }
 }
 
 # Dynamic Target Groups
@@ -312,11 +315,21 @@ resource "aws_lb_target_group" "access_tgs" {
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "ip"
-  health_check { path = "/"; matcher = "200-499"; timeout = 10; interval = 60 }
+  health_check {
+    path     = "/"
+    matcher  = "200-499"
+    timeout  = 10
+    interval = 60
+  }
 }
 resource "aws_lb_target_group" "core_tgs" {
   for_each = var.tg_core_group
-  name     = "tg-${each.key}"
+  name     = "tg
+    path     = "/"
+    matcher  = "200-499"
+    timeout  = 10
+    interval = 60
+ 
   port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -325,7 +338,12 @@ resource "aws_lb_target_group" "core_tgs" {
 }
 resource "aws_lb_target_group" "heavy_tgs" {
   for_each = var.tg_heavy_group
-  name     = "tg-${each.key}"
+  name     = "tg
+    path     = "/"
+    matcher  = "200-499"
+    timeout  = 10
+    interval = 60
+ 
   port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
