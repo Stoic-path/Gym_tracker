@@ -522,22 +522,48 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 
 # WEB
 resource "aws_ecs_task_definition" "web" {
-  family = "${var.project_name}-web"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-web"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "web", image = "${aws_ecr_repository.services[0].repository_url}:dev", essential = true,
     portMappings = [{ containerPort = 80 }],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "web" } }
   }])
 }
+
 resource "aws_ecs_service" "web" {
-  name = "${var.project_name}-web-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.web.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.web.arn; container_name = "web"; container_port = 80 }
+  name            = "${var.project_name}-web-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.web.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web.arn
+    container_name   = "web"
+    container_port   = 80
+  }
 }
 
 # AUTH (Use database_server IP)
 resource "aws_ecs_task_definition" "auth" {
-  family = "${var.project_name}-auth"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-auth"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "auth", # ESTO ES LO QUE BUSCAMOS EN EL CI.YML (Debe ser "auth")
     image = "${aws_ecr_repository.services[1].repository_url}:dev", 
@@ -553,15 +579,35 @@ resource "aws_ecs_task_definition" "auth" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "auth" } }
   }])
 }
+
 resource "aws_ecs_service" "auth" {
-  name = "${var.project_name}-auth-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.auth.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["auth"].arn; container_name = "auth"; container_port = 8001 }
+  name            = "${var.project_name}-auth-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.auth.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["auth"].arn
+    container_name   = "auth"
+    container_port   = 8001
+  }
 }
 
 # USER
 resource "aws_ecs_task_definition" "user" {
-  family = "${var.project_name}-user"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-user"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "user", image = "${aws_ecr_repository.services[2].repository_url}:dev", essential = true,
     # command = [
@@ -578,15 +624,35 @@ resource "aws_ecs_task_definition" "user" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "user" } }
   }])
 }
+
 resource "aws_ecs_service" "user" {
-  name = "${var.project_name}-user-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.user.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["user"].arn; container_name = "user"; container_port = 8002 }
+  name            = "${var.project_name}-user-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.user.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["user"].arn
+    container_name   = "user"
+    container_port   = 8002
+  }
 }
 
 # SYNC
 resource "aws_ecs_task_definition" "sync" {
-  family = "${var.project_name}-sync"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-sync"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "sync", image = "${aws_ecr_repository.services[10].repository_url}:dev", essential = true,
     portMappings = [{ containerPort = 8009 }],
@@ -594,15 +660,35 @@ resource "aws_ecs_task_definition" "sync" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "sync" } }
   }])
 }
+
 resource "aws_ecs_service" "sync" {
-  name = "${var.project_name}-sync-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.sync.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.access_tgs["sync"].arn; container_name = "sync"; container_port = 8009 }
+  name            = "${var.project_name}-sync-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.sync.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.access_tgs["sync"].arn
+    container_name   = "sync"
+    container_port   = 8009
+  }
 }
 
 # WORKOUT COMMAND (MONGO)
 resource "aws_ecs_task_definition" "work_cmd" {
-  family = "${var.project_name}-work-cmd"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-work-cmd"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "work-cmd", image = "${aws_ecr_repository.services[6].repository_url}:dev", essential = true,
     # command = ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8003"],
@@ -617,15 +703,35 @@ resource "aws_ecs_task_definition" "work_cmd" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-cmd" } }
   }])
 }
+
 resource "aws_ecs_service" "work_cmd" {
-  name = "${var.project_name}-work-cmd-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.work_cmd.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn; container_name = "work-cmd"; container_port = 8003 }
+  name            = "${var.project_name}-work-cmd-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.work_cmd.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["work-cmd"].arn
+    container_name   = "work-cmd"
+    container_port   = 8003
+  }
 }
 
 # WORKOUT QUERY
 resource "aws_ecs_task_definition" "work_qry" {
-  family = "${var.project_name}-work-qry"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-work-qry"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "work-qry", image = "${aws_ecr_repository.services[7].repository_url}:dev", essential = true,
     # command = ["sh", "-c", "python manage.py migrate && python manage.py seed_mongo && python manage.py runserver 0.0.0.0:8004"],
@@ -639,15 +745,35 @@ resource "aws_ecs_task_definition" "work_qry" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "work-qry" } }
   }])
 }
+
 resource "aws_ecs_service" "work_qry" {
-  name = "${var.project_name}-work-qry-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.work_qry.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn; container_name = "work-qry"; container_port = 8004 }
+  name            = "${var.project_name}-work-qry-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.work_qry.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["work-qry"].arn
+    container_name   = "work-qry"
+    container_port   = 8004
+  }
 }
 
 # ROUTINE
 resource "aws_ecs_task_definition" "routine" {
-  family = "${var.project_name}-routine"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-routine"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "routine", image = "${aws_ecr_repository.services[3].repository_url}:dev", essential = true,
     portMappings = [{ containerPort = 8005 }],
@@ -658,15 +784,35 @@ resource "aws_ecs_task_definition" "routine" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "routine" } }
   }])
 }
+
 resource "aws_ecs_service" "routine" {
-  name = "${var.project_name}-routine-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.routine.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["routine"].arn; container_name = "routine"; container_port = 8005 }
+  name            = "${var.project_name}-routine-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.routine.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["routine"].arn
+    container_name   = "routine"
+    container_port   = 8005
+  }
 }
 
 # EXERCISE LIBRARY
 resource "aws_ecs_task_definition" "exercise" {
-  family = "${var.project_name}-exercise"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-exercise"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "exercise", image = "${aws_ecr_repository.services[8].repository_url}:dev", essential = true,
     # command = ["sh", "-c", "python manage.py makemigrations exercises && python manage.py migrate && python manage.py seed_exercises && python manage.py runserver 0.0.0.0:8006"],
@@ -679,26 +825,60 @@ resource "aws_ecs_task_definition" "exercise" {
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "exercise" } }
   }])
 }
+
 resource "aws_ecs_service" "exercise" {
-  name = "${var.project_name}-exercise-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.exercise.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn; container_name = "exercise"; container_port = 8006 }
+  name            = "${var.project_name}-exercise-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.exercise.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.core_tgs["exercise"].arn
+    container_name   = "exercise"
+    container_port   = 8006
+  }
 }
 
 # NOTIFY, VIDEO, ANALYTICS (OMITIDOS PARA BREVEDAD, SEGUIR PATRÓN DE ARRIBA USANDO aws_instance.database_server.private_ip)
 # Video - Port 8007
 resource "aws_ecs_task_definition" "video" {
-  family = "${var.project_name}-video"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-video"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "video", image = "${aws_ecr_repository.services[9].repository_url}:dev", essential = true, portMappings = [{ max = 8007, min = 8007, containerPort = 8007 }],
     environment = [ { name = "MONGO_HOST", value = aws_instance.database_server.private_ip }, { name = "REDIS_HOST", value = aws_instance.database_server.private_ip }, { name = "DJANGO_SECRET_KEY", value = var.django_secret_key } ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "video" } }
   }])
 }
+
 resource "aws_ecs_service" "video" {
-  name = "${var.project_name}-video-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.video.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn; container_name = "video"; container_port = 8007 }
+  name            = "${var.project_name}-video-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.video.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["video"].arn
+    container_name   = "video"
+    container_port   = 8007
+  }
 }
 # Analytics - Port 8010
 resource "aws_ecs_task_definition" "analytics" {
@@ -726,23 +906,57 @@ resource "aws_ecs_task_definition" "analytics" {
   }])
 }
 resource "aws_ecs_service" "analytics" {
-  name = "${var.project_name}-analytics-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.analytics.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn; container_name = "analytics"; container_port = 8010 }
+  name            = "${var.project_name}-analytics-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.analytics.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["analytics"].arn
+    container_name   = "analytics"
+    container_port   = 8010
+  }
 }
+
 # Notify - Port 8008
 resource "aws_ecs_task_definition" "notify" {
-  family = "${var.project_name}-notify"; network_mode = "awsvpc"; requires_compatibilities = ["FARGATE"]; cpu = 256; memory = 512; execution_role_arn = data.aws_iam_role.lab_role.arn
+  family                   = "${var.project_name}-notify"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+
   container_definitions = jsonencode([{
     name = "notify", image = "${aws_ecr_repository.services[5].repository_url}:dev", essential = true, portMappings = [{ containerPort = 8008 }],
     environment = [ { name = "REDIS_HOST", value = aws_instance.database_server.private_ip }, { name = "DJANGO_SECRET_KEY", value = var.django_secret_key } ],
     logConfiguration = { logDriver = "awslogs", options = { "awslogs-group" = aws_cloudwatch_log_group.ecs_logs.name, "awslogs-region" = var.aws_region, "awslogs-stream-prefix" = "notify" } }
   }])
 }
+
 resource "aws_ecs_service" "notify" {
-  name = "${var.project_name}-notify-service"; cluster = aws_ecs_cluster.main.id; task_definition = aws_ecs_task_definition.notify.arn; desired_count = 1; launch_type = "FARGATE"
-  network_configuration { subnets = [aws_subnet.private_1.id]; security_groups = [aws_security_group.app_sg.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn; container_name = "notify"; container_port = 8008 }
+  name            = "${var.project_name}-notify-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.notify.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = [aws_subnet.private_1.id]
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.heavy_tgs["notify"].arn
+    container_name   = "notify"
+    container_port   = 8008
+  }
 }
 
 # --- OUTPUTS ---
