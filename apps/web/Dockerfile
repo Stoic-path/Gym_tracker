@@ -15,6 +15,10 @@ RUN pnpm install
 # Copy the rest of the code
 COPY . .
 
+# Argumento de construcción para la URL de la API
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build the application (generates /dist folder)
 RUN pnpm run build
 

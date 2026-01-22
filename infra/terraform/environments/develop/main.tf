@@ -569,7 +569,6 @@ resource "aws_ecs_task_definition" "auth" {
     name = "auth", # ESTO ES LO QUE BUSCAMOS EN EL CI.YML (Debe ser "auth")
     image = "${aws_ecr_repository.services[1].repository_url}:dev", 
     essential = true,
-    # command = ["sh", "-c", "python -c 'import socket, time; s=socket.socket(); s.settimeout(1); [time.sleep(1) for _ in range(300) if s.connect_ex((\"${aws_instance.database_server.private_ip}\", 5432)) != 0]' && python manage.py migrate && python init_user.py && python seed_data.py && python manage.py runserver 0.0.0.0:8001"],
     portMappings = [{ containerPort = 8001 }],
     environment = [
       { name = "DATABASE_URL", value = "postgresql://admin:adminpassword@${aws_instance.database_server.private_ip}:5432/auth_db" },
@@ -612,11 +611,6 @@ resource "aws_ecs_task_definition" "user" {
 
   container_definitions = jsonencode([{
     name = "user", image = "${aws_ecr_repository.services[2].repository_url}:dev", essential = true,
-    # command = [
-    #   "sh", 
-    #   "-c", 
-    #   "while ! nc -z ${aws_instance.database_server.private_ip} 5432; do echo 'Waiting for DB...'; sleep 3; done; python manage.py migrate && python manage.py runserver 0.0.0.0:8002"
-    # ],
     portMappings = [{ containerPort = 8002 }],
     environment = [
       { name = "DATABASE_URL", value = "postgresql://admin:adminpassword@${aws_instance.database_server.private_ip}:5432/user_profile_db" },
