@@ -615,7 +615,6 @@ resource "aws_ecs_task_definition" "user" {
     # command = [
     #   "sh", 
     #   "-c", 
-    #   # ESTO ES LO IMPORTANTE: Bucle que intenta conectar al puerto 5432 antes de seguir
     #   "while ! nc -z ${aws_instance.database_server.private_ip} 5432; do echo 'Waiting for DB...'; sleep 3; done; python manage.py migrate && python manage.py runserver 0.0.0.0:8002"
     # ],
     portMappings = [{ containerPort = 8002 }],
