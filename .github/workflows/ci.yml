@@ -200,6 +200,10 @@ jobs:
           context: . # Contexto en la raíz para que el COPY ../.. funcione si es necesario
           file: ${{ matrix.path }}/Dockerfile
           push: true
+          # Inyectamos la URL del ALB como Build Arg.
+          # GitHub tomará el valor correcto (dev o prod) según el Environment activo.
+          build-args: |
+            VITE_API_URL=${{ vars.ALB_DNS_URL }}
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
           cache-from: type=registry,ref=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}/${{ matrix.name }}:buildcache
