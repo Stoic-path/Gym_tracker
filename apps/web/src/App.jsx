@@ -11,7 +11,7 @@ function App() {
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
 
-  // 1. Auth Service Interaction
+  // 1. Auth Service Interactionn
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
