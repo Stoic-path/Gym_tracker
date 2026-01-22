@@ -36,7 +36,7 @@ if (Test-Path terraform.tfstate.backup) { Remove-Item -Force terraform.tfstate.b
 Write-Host " Ejecutando Terraform Init..." -ForegroundColor Blue
 terraform init
 
-Write-Host " Ejecutando Terraform Apply..." -ForegroundColor Purple
+Write-Host " Ejecutando Terraform Apply..." -ForegroundColor Magenta
 terraform apply -auto-approve -input=false
 
 Write-Host "-----------------------------------------------------"
