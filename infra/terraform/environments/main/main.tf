@@ -338,17 +338,17 @@ resource "aws_lb_target_group" "core_tgs" {
 }
 resource "aws_lb_target_group" "heavy_tgs" {
   for_each = var.tg_heavy_group
-  name     = "tg
-    path     = "/"
-    matcher  = "200-499"
-    timeout  = 10
-    interval = 60
- 
+  name     = "tg-${each.key}"
   port     = each.value.port
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "ip"
-  health_check { path = "/"; matcher = "200-499"; timeout = 10; interval = 60 }
+  health_check {
+    path     = "/"
+    matcher  = "200-499"
+    timeout  = 10
+    interval = 60
+  }
 }
 
 # --- LISTENER RULES ---
