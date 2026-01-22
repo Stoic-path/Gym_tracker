@@ -22,7 +22,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose standard port (internal to container)
-EXPOSE 8000
+EXPOSE 8004
+
+# Make start script executable
+RUN chmod +x start.sh
 
 # Default command on startup
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["./start.sh"]
