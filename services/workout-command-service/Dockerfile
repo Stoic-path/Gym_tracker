@@ -1,5 +1,5 @@
 ﻿# Official Python base image (lightweight)
-FROM python:3.13.11-slim
+FROM python:3.10-slim
 
 # Prevent Python from generating .pyc files and force real-time console output
 ENV PYTHONDONTWRITEBYTECODE=1
