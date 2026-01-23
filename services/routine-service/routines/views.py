@@ -15,9 +15,13 @@ class RoutineViewSet(viewsets.ModelViewSet):
         if not user or user.is_anonymous:
             return Routine.objects.none()
 
+        # Convertir user.id a string UUID para evitar problemas de tipo en el ORM
+        # Especialmente si user.id viene del JWT como string y el campo es UUIDField
+        user_id_val = str(user.id) if user.id else None
+
         # Retornar rutinas propias O rutinas públicas
         from django.db.models import Q
-        return Routine.objects.filter(Q(user_id=user.id) | Q(is_public=True))
+        return Routine.objects.filter(Q(user_id=user_id_val) | Q(is_public=True))
 
     def perform_create(self, serializer):
         """
