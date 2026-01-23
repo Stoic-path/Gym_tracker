@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.conf import settings
-import pymongo
+from django.conf import settings
 
 class WorkoutHistoryView(APIView):
     authentication_classes = []
@@ -16,8 +16,11 @@ class WorkoutHistoryView(APIView):
     
     def get(self, request):
         try:
-            client = pymongo.MongoClient(settings.MONGO_URI)
-            db = client["gym_workouts_db"]
+            # Usamos la conexión ya establecida en settings
+            db = settings.mongo_db
+            if db is None:
+                return Response({"error": "MongoDB connection not initialized"}, status=500)
+
             collection = db["workouts"]
             
             # Retrieve data, excluding Mongo internal _id field
@@ -28,6 +31,7 @@ class WorkoutHistoryView(APIView):
 
             return Response(data)
         except Exception as e:
+            return Response({"error": "Mongo Query Error", "details": str(e)}, status=500)
             return Response({"error": "Mongo Connection Failed", "details": str(e)}, status=500)
 
 def health_check(request):
