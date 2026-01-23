@@ -19,8 +19,8 @@ def get_mongo_db():
         # Fallback manual construction if settings.MONGO_URI is missing
         host = os.environ.get('MONGO_HOST', 'localhost')
         port = os.environ.get('MONGO_PORT', '27017')
-        user = os.environ.get('MONGO_USER', 'gym_user')
-        password = os.environ.get('MONGO_PASS', 'gym_password_123')
+        user = os.environ.get('MONGO_USER', 'gym_mongo_user')
+        password = os.environ.get('MONGO_PASS', 'gym_mongo_pass_dev')
         auth_src = os.environ.get('MONGO_AUTH_SOURCE', 'admin')
         if user and password:
             conn_str = f"mongodb://{user}:{password}@{host}:{port}/?authSource={auth_src}"
