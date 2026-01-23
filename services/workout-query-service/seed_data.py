@@ -8,7 +8,20 @@ django.setup()
 from django.conf import settings
 
 # Obtener URI desde settings o variable de entorno
-MONGO_URI = getattr(settings, 'MONGO_URI', None) or os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+# Reconstruir URI con authenticación si es necesario para asegurar que el seed script funcione
+MONGO_HOST = getattr(settings, 'MONGO_HOST', 'localhost')
+MONGO_PORT = int(getattr(settings, 'MONGO_PORT', 27017))
+MONGO_USER = getattr(settings, 'MONGO_USER', 'gym_user')
+MONGO_PASS = getattr(settings, 'MONGO_PASS', 'gym_password_123')
+MONGO_AUTH_SOURCE = getattr(settings, 'MONGO_AUTH_SOURCE', 'admin')
+
+# Construir URI robusta
+if MONGO_USER and MONGO_PASS:
+    MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/?authSource={MONGO_AUTH_SOURCE}"
+else:
+    MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+    
+print(f"DEBUG: Connecting to MongoDB at {MONGO_HOST}:{MONGO_PORT} (User: {MONGO_USER}, AuthSource: {MONGO_AUTH_SOURCE})")
 
 # UUID DETERMINISTA (El mismo de siempre)
 ADMIN_UUID = "00000000-0000-0000-0000-000000000001"

@@ -18,13 +18,7 @@ def seed():
     UserAnalytics.objects.create(
         user_id=ADMIN_UUID,
         total_workouts=15,
-        total_calories=4500.0,
-        current_streak=3,
-        favorite_muscle="Chest",
-        average_technique_score=8.5,
-        exercises_improved=12,
-        exercises_plateau=2,
-        exercises_atrophy=0
+        total_calories=4500.0
     )
     print("✅ Analytics data created successfully.")
 
