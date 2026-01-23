@@ -14,6 +14,7 @@ class StatelessUser:
         self.email = payload.get('email', '')
         self.is_authenticated = True
         self.is_anonymous = False
+        self.is_active = True
         self.is_staff = False  # Or derive from roles in payload
         self.is_superuser = False
 
