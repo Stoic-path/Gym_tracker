@@ -94,9 +94,17 @@ STATIC_URL = 'static/'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'app.authentication.StatelessJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+}
+
+# Configuración básica para JWT si no existía, para que StatelessJWTAuthentication encuentre la key
+SIMPLE_JWT = {
+    'SIGNING_KEY': os.environ.get('SECRET_KEY', SECRET_KEY),
+    'ALGORITHM': 'HS256',
+    'USER_ID_CLAIM': 'user_id',
 }
