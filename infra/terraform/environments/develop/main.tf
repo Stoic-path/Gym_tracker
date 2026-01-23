@@ -209,10 +209,10 @@ resource "aws_instance" "database_server" {
     docker network create gym-network
 
     # 1. REDIS
-    docker run -d --name redis-cache --network gym-network -p 6379:6379 redis:7-alpine
+    docker run -d --name redis-cache --restart always --network gym-network -p 6379:6379 redis:7-alpine
 
     # 2. MONGO
-    docker run -d --name mongo-db --network gym-network -p 27017:27017 mongo:6.0
+    docker run -d --name mongo-db --restart always --network gym-network -p 27017:27017 mongo:6.0
 
     # 3. POSTGRES (Con truco para multi-db)
     # Creamos un script SQL de inicio en el host
@@ -230,6 +230,7 @@ resource "aws_instance" "database_server" {
 
     docker run -d \
       --name postgres-db \
+      --restart always \
       --network gym-network \
       -p 5432:5432 \
       -e POSTGRES_USER=admin \
