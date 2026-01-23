@@ -81,8 +81,11 @@ class AdminApp(ctk.CTk):
         
         # Cargar Grupos (Ejercicios)
         ok1, data1 = self.client.get_groups()
-        # Cargar Rutinas
-        ok2, data2 = self.client.get_routines()
+        # Cargar Rutinas (En bloque try para evitar crash total)
+        try:
+            ok2, data2 = self.client.get_routines()
+        except Exception as e:
+            ok2, data2 = False, str(e)
 
         if ok1:
             self.current_groups = data1
@@ -90,7 +93,8 @@ class AdminApp(ctk.CTk):
                 self.current_routines = data2
             else:
                 self.lbl_status.configure(text=f"Rutinas error: {str(data2)[:50]}...", text_color="orange")
-                print(f"Full Routine Error: {data2}")
+                # No crasheamos, permitimos usar la app solo para grupos
+                self.current_routines = []
             
             self.show_dashboard()
         else:
