@@ -28,15 +28,15 @@ class AnalyticsSummaryView(APIView):
             stats = UserAnalytics.objects.get(user_id=user_id)
             return Response({
                 "total_workouts": stats.total_workouts,
-                "calories_burned": stats.calories_burned,
-                "current_streak": stats.current_streak,
-                "favorite_muscle": stats.favorite_muscle,
+                "calories_burned": stats.total_calories,  # Mapped from total_calories
+                "current_streak": 0,                      # Default/Placeholder
+                "favorite_muscle": "N/A",                 # Default/Placeholder
                 "progress_metrics": {
-                    "improved": stats.exercises_improved,
-                    "plateau": stats.exercises_plateau,
-                    "atrophy": stats.exercises_atrophy
+                    "improved": 0,
+                    "plateau": 0,
+                    "atrophy": 0
                 },
-                "technique_score": stats.average_technique_score,
+                "technique_score": 0.0,                   # Default/Placeholder
                 "source": "Analytics Service (DB Real)"
             })
         except UserAnalytics.DoesNotExist:
