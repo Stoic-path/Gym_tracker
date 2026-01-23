@@ -14,8 +14,8 @@ MONGO_URI = getattr(settings, 'MONGO_URI', None)
 if not MONGO_URI:
     MONGO_HOST = getattr(settings, 'MONGO_HOST', 'localhost')
     MONGO_PORT = int(getattr(settings, 'MONGO_PORT', 27017))
-    MONGO_USER = getattr(settings, 'MONGO_USER', 'gym_mongo_user')
-    MONGO_PASS = getattr(settings, 'MONGO_PASS', 'gym_mongo_pass_dev')
+    MONGO_USER = getattr(settings, 'MONGO_USER', None)
+    MONGO_PASS = getattr(settings, 'MONGO_PASS', None)
     MONGO_AUTH_SOURCE = getattr(settings, 'MONGO_AUTH_SOURCE', 'admin')
 
     if MONGO_USER and MONGO_PASS:
