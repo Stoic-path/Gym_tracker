@@ -18,7 +18,7 @@ class RoutineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Routine
-        fields = ['id', 'user_id', 'name', 'created_at', 'is_active', 'groups']
+        fields = ['id', 'user_id', 'name', 'created_at', 'groups', 'is_public']
         read_only_fields = ['user_id', 'created_at']
 
     def validate(self, data):

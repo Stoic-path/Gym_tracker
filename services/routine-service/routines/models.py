@@ -9,6 +9,7 @@ class Routine(models.Model):
     
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_public = models.BooleanField(default=False)  # Rutinas globales/plantillas
 
     def __str__(self):
         return f"{self.name} by {self.user_id}"
