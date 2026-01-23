@@ -1,78 +1,72 @@
 import os
-import pymongo
-import random
-from datetime import datetime, timedelta
-import uuid
 import django
-import datetime
+from pymongo import MongoClient
+from datetime import datetime
 
-# Configuración de conexión (Igual que settings.py)
-MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
-MONGO_PORT = int(os.environ.get('MONGO_PORT', 27017))
-MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'workout_query_db')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
+django.setup()
+from django.conf import settings
 
-# Intentar conexión simple (sin auth) primero, ya que es lo que funcionó en tu infraestructura
-MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+# Obtener URI desde settings o variable de entorno
+MONGO_URI = getattr(settings, 'MONGO_URI', None) or os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 
-EXERCISES_LIST = ["Squat", "Bench Press", "Deadlift", "Overhead Press", "Pull Up", "Dips", "Lunges"]
-
-# Asumimos que tienes modelos o usas PyMongo directo. 
-# Si usas Djongo/Models, adáptalo. Aquí un ejemplo genérico:
-from queries.models import WorkoutHistory # Ajusta según tu modelo real
-
-# EL MISMO UUID DETERMINISTA
+# UUID DETERMINISTA (El mismo de siempre)
 ADMIN_UUID = "00000000-0000-0000-0000-000000000001"
 
-def seed():
+def seed_mongo():
     try:
-        client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-        db = client[MONGO_DB_NAME]
-        collection = db['workouts']
+        print("🌱 Connecting to MongoDB for Seeding...")
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        
+        # Nombre de DB debe coincidir con settings.py (workout_query_db)
+        db_name = getattr(settings, 'MONGO_DB_NAME', 'workout_query_db')
+        db = client[db_name]
+        
+        # Verificar conexión
+        client.server_info()
+        print(f"✅ Connected to {db.name}")
 
-        # Idempotencia
-        if collection.count_documents({}) >= 100:
-            print("✅ [Seed] Workout Query: Ya existen 100+ entrenamientos. Saltando seed.")
+        collection = db["workouts"]
+
+        # Verificar si ya existen datos para este usuario
+        if collection.count_documents({"user_id": ADMIN_UUID}) > 0:
+            print(f"⚠️ Workouts for user {ADMIN_UUID} already exist. Skipping.")
             return
 
-        print("🌱 [Seed] Workout Query: Insertando 100 entrenamientos...")
-        workouts = []
-        for i in range(100):
-            email = f"user_{i}@gymtracker.com"
-            user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, email))
-            
-            workouts.append({
-                "user_id": user_id,
-                "name": f"Workout Session {i}",
-                "date": (datetime.now() - timedelta(days=i)).isoformat(),
-                "duration_minutes": random.randint(30, 90),
-                "calories_burned": random.randint(200, 600),
-                "exercises": random.sample(EXERCISES_LIST, k=3),
+        print(f"🚀 Inserting sample workouts for {ADMIN_UUID}...")
+        
+        sample_workouts = [
+            {
+                "user_id": ADMIN_UUID,
+                "name": "Chest Day Blast",
+                "date": datetime.now().isoformat(),
+                "duration_minutes": 65,
+                "calories_burned": 450,
+                "exercises": [
+                    {"name": "Bench Press", "sets": 4, "reps": 10, "weight": 80},
+                    {"name": "Incline Dumbbell Press", "sets": 3, "reps": 12, "weight": 25}
+                ],
                 "status": "completed"
-            })
-        
-        collection.insert_many(workouts)
-        print("✅ [Seed] Workout Query: Carga completa.")
+            },
+            {
+                "user_id": ADMIN_UUID,
+                "name": "Leg Day Survival",
+                "date": datetime.now().isoformat(),
+                "duration_minutes": 80,
+                "calories_burned": 600,
+                "exercises": [
+                    {"name": "Squat", "sets": 5, "reps": 5, "weight": 120},
+                    {"name": "Leg Extension", "sets": 3, "reps": 15, "weight": 50}
+                ],
+                "status": "completed"
+            }
+        ]
 
-        # Verificar si ya existe alguna rutina de este usuario
-        if WorkoutHistory.objects.filter(user_id=ADMIN_UUID).exists():
-            print("⚠️  Workouts for Admin already exist.")
-            return
-
-        print(f"🌱 Seeding mongo Workouts for UUID {ADMIN_UUID}...")
-        
-        WorkoutHistory.objects.create(
-            user_id=ADMIN_UUID, # ENLACE CRÍTICO
-            workout_name="Full Body Intro",
-            date=datetime.date.today(),
-            duration_minutes=45,
-            calories_burned=300
-        )
-        print("✅ MongoDB Workouts seeded.")
+        collection.insert_many(sample_workouts)
+        print("✅ Sample workouts inserted successfully!")
 
     except Exception as e:
-        print(f"❌ [Seed] Error conectando a Mongo: {e}")
+        print(f"❌ Failed to seed MongoDB: {e}")
 
-if __name__ == '__main__':
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
-    django.setup()
-    seed()
+if __name__ == "__main__":
+    seed_mongo()

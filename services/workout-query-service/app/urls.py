@@ -32,7 +32,6 @@ class WorkoutHistoryView(APIView):
             return Response(data)
         except Exception as e:
             return Response({"error": "Mongo Query Error", "details": str(e)}, status=500)
-            return Response({"error": "Mongo Connection Failed", "details": str(e)}, status=500)
 
 def health_check(request):
     return HttpResponse("OK", status=200)
