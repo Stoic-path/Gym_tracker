@@ -7,21 +7,23 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
 django.setup()
 from django.conf import settings
 
-# Obtener URI desde settings o variable de entorno
-# Reconstruir URI con authenticación si es necesario para asegurar que el seed script funcione
-MONGO_HOST = getattr(settings, 'MONGO_HOST', 'localhost')
-MONGO_PORT = int(getattr(settings, 'MONGO_PORT', 27017))
-MONGO_USER = getattr(settings, 'MONGO_USER', 'gym_user')
-MONGO_PASS = getattr(settings, 'MONGO_PASS', 'gym_password_123')
-MONGO_AUTH_SOURCE = getattr(settings, 'MONGO_AUTH_SOURCE', 'admin')
+# Obtener URI desde settings (que ya prioriza env var)
+MONGO_URI = getattr(settings, 'MONGO_URI', None)
 
-# Construir URI robusta
-if MONGO_USER and MONGO_PASS:
-    MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/?authSource={MONGO_AUTH_SOURCE}"
-else:
-    MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+# Si no hay URI en settings, intentar construirla de nuevo (Fallback)
+if not MONGO_URI:
+    MONGO_HOST = getattr(settings, 'MONGO_HOST', 'localhost')
+    MONGO_PORT = int(getattr(settings, 'MONGO_PORT', 27017))
+    MONGO_USER = getattr(settings, 'MONGO_USER', 'gym_mongo_user')
+    MONGO_PASS = getattr(settings, 'MONGO_PASS', 'gym_mongo_pass_dev')
+    MONGO_AUTH_SOURCE = getattr(settings, 'MONGO_AUTH_SOURCE', 'admin')
+
+    if MONGO_USER and MONGO_PASS:
+        MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/?authSource={MONGO_AUTH_SOURCE}"
+    else:
+        MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
     
-print(f"DEBUG: Connecting to MongoDB at {MONGO_HOST}:{MONGO_PORT} (User: {MONGO_USER}, AuthSource: {MONGO_AUTH_SOURCE})")
+print(f"DEBUG: Using Mongo URI: {MONGO_URI.split('@')[-1] if '@' in MONGO_URI else 'localhost'}...")
 
 # UUID DETERMINISTA (El mismo de siempre)
 ADMIN_UUID = "00000000-0000-0000-0000-000000000001"
