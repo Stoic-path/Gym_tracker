@@ -18,6 +18,10 @@ class StatelessUser:
         self.is_staff = False  # Or derive from roles in payload
         self.is_superuser = False
 
+    @property
+    def pk(self):
+        return self.id
+
     def __str__(self):
         return f"StatelessUser(id={self.id}, email={self.email})"
 
