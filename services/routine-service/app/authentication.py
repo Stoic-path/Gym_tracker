@@ -22,6 +22,26 @@ class StatelessUser:
     def pk(self):
         return self.id
 
+    def has_perm(self, perm, obj=None):
+        return self.is_superuser
+
+    def has_module_perms(self, app_label):
+        return self.is_superuser
+
+    @property
+    def groups(self):
+        """Mock groups manager"""
+        class MockManager:
+            def all(self): return []
+        return MockManager()
+
+    @property
+    def user_permissions(self):
+        """Mock permissions manager"""
+        class MockManager:
+            def all(self): return []
+        return MockManager()
+
     def __str__(self):
         return f"StatelessUser(id={self.id}, email={self.email})"
 
