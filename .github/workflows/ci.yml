@@ -318,12 +318,20 @@ jobs:
           CLUSTER_NAME="${PROJECT_NAME}-cluster"
           TASK_FAMILY="${PROJECT_NAME}-auth" 
           
-          SUBNET_ID=$(aws ec2 describe-subnets --query "Subnets[0].SubnetId" --output text)
-          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=*db-sg*" --query "SecurityGroups[0].GroupId" --output text)
+          # Usamos filtros precisos por TAG y NOMBRE para evitar mezclar VPCs (por ej. Default vs Custom)
+          # Buscamos la Subnet PÚBLICA creada por Terraform (gym-tracker-public-1)
+          SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=${PROJECT_NAME}-public-1" --query "Subnets[0].SubnetId" --output text)
+          
+          # Buscamos el Security Group de la APLICACIÓN (gym-tracker-app-sg) que pertenece a esa misma VPC
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=${PROJECT_NAME}-app-sg" --query "SecurityGroups[0].GroupId" --output text)
 
-          if [ "$SUBNET_ID" == "None" ] || [ "$SG_ID" == "None" ]; then
-             echo "⚠️ Could not auto-detect Subnet/SG. Skipping."
-             exit 0
+          echo "🔍 Debug Network: Subnet=$SUBNET_ID, SG=$SG_ID"
+
+          if [ "$SUBNET_ID" == "None" ] || [ "$SG_ID" == "None" ] || [ -z "$SUBNET_ID" ]; then
+             echo "⚠️ Could not auto-detect specific Subnet/SG. Fallback to default search..."
+             # Fallback simple
+             SUBNET_ID=$(aws ec2 describe-subnets --query "Subnets[0].SubnetId" --output text)
+             SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=*db-sg*" --query "SecurityGroups[0].GroupId" --output text)
           fi
 
           # --- CORRECCIÓN CRÍTICA AQUÍ ---
